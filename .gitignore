@@ -1,0 +1,28 @@
+# API keys and secrets
+ai-image-tool/config.js
+
+# Node.js
+node_modules/
+package-lock.json
+
+# Claude Code
+.claude/
+
+# OS files
+Thumbs.db
+.DS_Store
+
+# IDE
+.vscode/
+.idea/
+
+# Logs
+*.log
+
+# Python
+__pycache__/
+*.pyc
+
+# Other
+model-who-am-i-main (4)/
+seed_published.py

@@ -1,0 +1,344 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>关于我们 - ktoonAi</title>
+    <meta name="description" content="ktoonAi - AI创作工具探索与实践中心">
+    <link rel="icon" type="image/x-icon" href="/favicon.ico">
+    <style>
+        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+        :root {
+            --background: 230 25% 7%;
+            --foreground: 220 20% 92%;
+            --card: 230 20% 12%;
+            --card-foreground: 220 20% 92%;
+            --primary: 190 100% 55%;
+            --primary-foreground: 230 25% 7%;
+            --muted: 230 15% 18%;
+            --muted-foreground: 220 10% 55%;
+            --accent: 270 60% 55%;
+            --border: 230 15% 20%;
+            --radius: 12px;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: hsl(var(--background));
+            color: hsl(var(--foreground));
+            min-height: 100vh;
+            line-height: 1.6;
+        }
+
+        .container {
+            max-width: 960px;
+            margin: 0 auto;
+            padding: 60px 24px 80px;
+        }
+
+        /* Header */
+        /* Top bar */
+        .top-bar {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 16px 24px;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            z-index: 100;
+            background: hsl(var(--background) / 0.8);
+            backdrop-filter: blur(12px);
+            border-bottom: 1px solid hsl(var(--border));
+        }
+
+        .top-bar-logo {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            text-decoration: none;
+            font-weight: 700;
+            font-size: 1.1rem;
+        }
+
+        .top-bar-logo img {
+            width: 28px;
+            height: 28px;
+        }
+
+        .top-bar-logo span {
+            background: linear-gradient(135deg, #00d4ff, #8b5cf6);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .back-btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 8px 16px;
+            border-radius: 8px;
+            background: hsl(var(--muted));
+            color: hsl(var(--foreground));
+            text-decoration: none;
+            font-size: 0.85rem;
+            transition: background 0.2s;
+        }
+
+        .back-btn:hover {
+            background: hsl(var(--muted) / 0.7);
+        }
+
+        .about-header {
+            text-align: center;
+            margin-bottom: 48px;
+            padding-top: 40px;
+        }
+
+        .about-title {
+            font-size: 2rem;
+            font-weight: 700;
+            margin-bottom: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+        }
+
+        .about-title .sparkle {
+            color: hsl(var(--primary));
+            font-size: 1.2rem;
+        }
+
+        .about-subtitle {
+            color: hsl(var(--muted-foreground));
+            font-size: 0.95rem;
+        }
+
+        /* Grid */
+        .about-grid {
+            display: grid;
+            grid-template-columns: 1fr 1.4fr;
+            gap: 24px;
+            margin-bottom: 48px;
+        }
+
+        @media (max-width: 700px) {
+            .about-grid { grid-template-columns: 1fr; }
+        }
+
+        /* Cards */
+        .about-card {
+            background: hsl(var(--card));
+            border: 1px solid hsl(var(--border));
+            border-radius: var(--radius);
+            padding: 32px;
+        }
+
+        .card-label {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 0.75rem;
+            color: hsl(var(--primary));
+            background: hsl(var(--primary) / 0.1);
+            padding: 4px 12px;
+            border-radius: 20px;
+            margin-bottom: 20px;
+            font-weight: 500;
+        }
+
+        .card-label svg {
+            width: 14px;
+            height: 14px;
+        }
+
+        /* Author section */
+        .author-info {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+            margin-bottom: 20px;
+        }
+
+        .author-avatar {
+            width: 72px;
+            height: 72px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, hsl(var(--primary) / 0.3), hsl(var(--accent) / 0.3));
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 2rem;
+            flex-shrink: 0;
+            overflow: hidden;
+        }
+
+        .author-avatar img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        .author-name {
+            font-size: 1.25rem;
+            font-weight: 600;
+        }
+
+        .author-role {
+            color: hsl(var(--muted-foreground));
+            font-size: 0.85rem;
+        }
+
+        .author-desc {
+            color: hsl(var(--muted-foreground));
+            font-size: 0.9rem;
+            line-height: 1.7;
+        }
+
+        /* Purpose section */
+        .purpose-title {
+            font-size: 1.3rem;
+            font-weight: 700;
+            margin-bottom: 12px;
+            line-height: 1.4;
+        }
+
+        .purpose-title span {
+            color: hsl(var(--primary));
+        }
+
+        .purpose-desc {
+            color: hsl(var(--muted-foreground));
+            font-size: 0.9rem;
+            line-height: 1.7;
+            margin-bottom: 24px;
+        }
+
+        /* Feature cards */
+        .features-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 12px;
+        }
+
+        .feature-card {
+            background: hsl(var(--muted) / 0.5);
+            border: 1px solid hsl(var(--border));
+            border-radius: 10px;
+            padding: 16px;
+            text-align: center;
+        }
+
+        .feature-icon {
+            font-size: 1.5rem;
+            margin-bottom: 6px;
+        }
+
+        .feature-name {
+            font-size: 0.85rem;
+            font-weight: 600;
+        }
+
+        /* Footer quote */
+        .about-footer {
+            text-align: center;
+            padding: 32px 24px;
+            border-top: 1px solid hsl(var(--border));
+            color: hsl(var(--muted-foreground));
+            font-size: 0.95rem;
+        }
+
+        .about-footer::before {
+            content: '\201C';
+            font-size: 2rem;
+            color: hsl(var(--primary) / 0.4);
+            display: block;
+            margin-bottom: 8px;
+        }
+    </style>
+</head>
+<body>
+    <!-- Top bar -->
+    <div class="top-bar">
+        <a href="index-converted.html" class="top-bar-logo">
+            <img src="../ai-image-tool/yangpian/LOGO/K.svg" alt="ktoonAi" width="28" height="28">
+            <span>ktoonAi</span>
+        </a>
+        <a href="index-converted.html" class="back-btn">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="15 18 9 12 15 6"/></svg>
+            返回首页
+        </a>
+    </div>
+
+    <div class="container">
+        <!-- Header -->
+        <div class="about-header">
+            <h1 class="about-title">
+                <span class="sparkle">&#10024;</span>
+                关于我们
+                <span class="sparkle">&#10024;</span>
+            </h1>
+            <p class="about-subtitle">AI创作工具探索与实践中心</p>
+        </div>
+
+        <!-- Two-column grid -->
+        <div class="about-grid">
+            <!-- Author card -->
+            <div class="about-card">
+                <div class="card-label">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+                    作者介绍
+                </div>
+                <div class="author-info">
+                    <div class="author-avatar">
+                        <img src="../ai-image-tool/yangpian/avatar.png" alt="avatar" onerror="this.parentElement.textContent='&#128100;'">
+                    </div>
+                    <div>
+                        <div class="author-name">张皓博</div>
+                        <div class="author-role">独立开发者 &amp; 全栈工程师</div>
+                        <div class="author-role">长春建筑学院 22级数字媒体技术</div>
+                    </div>
+                </div>
+                <p class="author-desc">热爱技术与设计，专注于探索AI技术与数字创作的无限可能。希望通过简单易用的AI工具，降低创作门槛，让每个人的创意都能轻松实现。</p>
+            </div>
+
+            <!-- Purpose card -->
+            <div class="about-card">
+                <div class="card-label">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>
+                    网站初衷
+                </div>
+                <h2 class="purpose-title">为 <span>AI</span> 创作者提供<br>最易上手的工具</h2>
+                <p class="purpose-desc">我们致力于为不同需求的创作者提供简单、高效的AI创作工具。无论你是设计师、内容创作者还是AI爱好者，都能在这里找到适合的工具，轻松将创意变为现实。专业、高效、便捷的AI创作体验。</p>
+                <div class="features-grid">
+                    <div class="feature-card">
+                        <div class="feature-icon">&#9881;&#65039;</div>
+                        <div class="feature-name">操作简单</div>
+                    </div>
+                    <div class="feature-card">
+                        <div class="feature-icon">&#9889;</div>
+                        <div class="feature-name">功能强大</div>
+                    </div>
+                    <div class="feature-card">
+                        <div class="feature-icon">&#128260;</div>
+                        <div class="feature-name">持续更新</div>
+                    </div>
+                    <div class="feature-card">
+                        <div class="feature-icon">&#128176;</div>
+                        <div class="feature-name">价格便宜</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Footer quote -->
+        <div class="about-footer">
+            让AI创作更简单，让每个人都能成为创作者。
+        </div>
+    </div>
+</body>
+</html>

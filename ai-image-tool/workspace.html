@@ -1,0 +1,1035 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ktoonAi - 创作工作台</title>
+    <link rel="icon" type="image/x-icon" href="/favicon.ico">
+    <style>
+        *, *::before, *::after {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        :root {
+            --background: 230 25% 7%;
+            --foreground: 220 20% 92%;
+            --card: 230 20% 12%;
+            --card-foreground: 220 20% 92%;
+            --primary: 190 100% 55%;
+            --primary-foreground: 230 25% 7%;
+            --secondary: 320 80% 60%;
+            --secondary-foreground: 220 20% 95%;
+            --muted: 230 15% 18%;
+            --muted-foreground: 220 10% 55%;
+            --accent: 270 60% 55%;
+            --accent-foreground: 220 20% 95%;
+            --border: 230 15% 20%;
+            --input: 230 15% 20%;
+            --ring: 190 100% 55%;
+            --radius: 0.75rem;
+            --sidebar-width: 220px;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            background-color: hsl(var(--background));
+            color: hsl(var(--foreground));
+            line-height: 1.5;
+            -webkit-font-smoothing: antialiased;
+            height: 100vh;
+            overflow: hidden;
+        }
+
+        /* Sidebar */
+        .sidebar {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: var(--sidebar-width);
+            height: 100vh;
+            background-color: hsl(var(--card));
+            border-right: 1px solid hsl(var(--border));
+            display: flex;
+            flex-direction: column;
+            z-index: 100;
+            overflow-y: auto;
+        }
+
+        .sidebar-logo {
+            display: flex;
+            align-items: center;
+            gap: 0.625rem;
+            padding: 1.25rem 1.25rem 1rem;
+            text-decoration: none;
+            color: inherit;
+            border-bottom: 1px solid hsl(var(--border));
+            margin-bottom: 0.5rem;
+        }
+
+        .sidebar-logo svg {
+            width: 1.75rem;
+            height: 1.75rem;
+            flex-shrink: 0;
+        }
+
+        .sidebar-logo-text {
+            font-size: 1.1rem;
+            font-weight: 700;
+            background: linear-gradient(135deg, hsl(var(--primary)) 0%, #8b5cf6 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .sidebar-nav {
+            flex: 1;
+            padding: 0.5rem 0;
+        }
+
+        .sidebar-section-label {
+            padding: 0.75rem 1.25rem 0.375rem;
+            font-size: 0.7rem;
+            font-weight: 600;
+            color: hsl(var(--muted-foreground));
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        .sidebar-item {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            padding: 0.625rem 1.25rem;
+            margin: 0.125rem 0.5rem;
+            border-radius: 0.5rem;
+            color: hsl(var(--muted-foreground));
+            text-decoration: none;
+            font-size: 0.875rem;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.15s ease;
+            border: none;
+            background: none;
+            width: calc(100% - 1rem);
+            text-align: left;
+        }
+
+        .sidebar-item:hover {
+            background-color: hsl(var(--muted));
+            color: hsl(var(--foreground));
+        }
+
+        .sidebar-item.active {
+            background-color: hsl(var(--primary) / 0.12);
+            color: hsl(var(--primary));
+        }
+
+        .sidebar-item.active .sidebar-icon {
+            color: hsl(var(--primary));
+        }
+
+        .sidebar-icon {
+            width: 1.25rem;
+            height: 1.25rem;
+            flex-shrink: 0;
+            color: hsl(var(--muted-foreground));
+            transition: color 0.15s ease;
+        }
+
+        .sidebar-item:hover .sidebar-icon {
+            color: hsl(var(--foreground));
+        }
+
+        .sidebar-divider {
+            height: 1px;
+            background-color: hsl(var(--border));
+            margin: 0.5rem 1.25rem;
+        }
+
+        .sidebar-bottom {
+            padding: 0.75rem;
+            border-top: 1px solid hsl(var(--border));
+        }
+
+        .sidebar-user {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            padding: 0.5rem 0.75rem;
+            border-radius: 0.5rem;
+            cursor: pointer;
+            transition: background-color 0.15s ease;
+        }
+
+        .sidebar-user:hover {
+            background-color: hsl(var(--muted));
+        }
+
+        .sidebar-avatar {
+            width: 2rem;
+            height: 2rem;
+            border-radius: 50%;
+            background: hsl(var(--muted));
+            border: 1px solid hsl(var(--border));
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+        }
+
+        .sidebar-avatar svg {
+            width: 1rem;
+            height: 1rem;
+            color: hsl(var(--muted-foreground));
+        }
+
+        .sidebar-avatar img {
+            width: 100%;
+            height: 100%;
+            border-radius: 50%;
+            object-fit: cover;
+        }
+
+        .sidebar-username {
+            font-size: 0.8rem;
+            color: hsl(var(--foreground));
+            font-weight: 500;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        .sidebar-login-hint {
+            font-size: 0.75rem;
+            color: hsl(var(--muted-foreground));
+        }
+
+        .sidebar-points {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.6rem 0.75rem;
+            margin: 0 0.5rem 0.5rem;
+            background: linear-gradient(135deg, hsl(var(--primary) / 0.12), hsl(var(--accent) / 0.12));
+            border: 1px solid hsl(var(--primary) / 0.2);
+            border-radius: 0.5rem;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .sidebar-points:hover {
+            border-color: hsl(var(--primary) / 0.4);
+            background: linear-gradient(135deg, hsl(var(--primary) / 0.18), hsl(var(--accent) / 0.18));
+        }
+        .sidebar-points-icon {
+            width: 1.25rem;
+            height: 1.25rem;
+            flex-shrink: 0;
+        }
+        .sidebar-points-label {
+            font-size: 0.7rem;
+            color: hsl(var(--muted-foreground));
+        }
+        .sidebar-points-value {
+            font-size: 0.85rem;
+            font-weight: 600;
+            color: hsl(var(--primary));
+            margin-left: auto;
+        }
+
+        /* Main Content */
+        .main-content {
+            margin-left: var(--sidebar-width);
+            height: 100vh;
+            overflow: hidden;
+        }
+
+        .main-content > iframe {
+            width: 100%;
+            height: 100%;
+            border: none;
+            background-color: hsl(var(--background));
+        }
+
+        /* Templates Section */
+        .templates-section {
+            width: 100%;
+            height: 100%;
+            overflow-y: auto;
+            padding: 2rem;
+            background-color: hsl(var(--background));
+        }
+
+        .templates-header {
+            text-align: center;
+            margin-bottom: 2rem;
+        }
+
+        .templates-title {
+            font-size: 2rem;
+            font-weight: 700;
+            margin-bottom: 0.5rem;
+            background: linear-gradient(135deg, hsl(var(--primary)) 0%, #8b5cf6 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .templates-subtitle {
+            font-size: 0.95rem;
+            color: hsl(var(--muted-foreground));
+        }
+
+        .templates-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+            gap: 1.25rem;
+            max-width: 960px;
+            margin: 0 auto;
+        }
+
+        .template-card {
+            background: hsl(var(--card));
+            border: 1px solid hsl(var(--border));
+            border-radius: var(--radius);
+            padding: 1.75rem 1.25rem;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .template-card:hover {
+            border-color: hsl(var(--primary));
+            transform: translateY(-2px);
+            box-shadow: 0 8px 24px hsl(0 0% 0% / 0.3);
+        }
+
+        .template-icon {
+            width: 2.5rem;
+            height: 2.5rem;
+            margin: 0 auto 1rem;
+            color: hsl(var(--primary));
+        }
+
+        .template-card-title {
+            font-size: 1rem;
+            font-weight: 600;
+            margin-bottom: 0.5rem;
+        }
+
+        .template-card-desc {
+            font-size: 0.8rem;
+            color: hsl(var(--muted-foreground));
+            line-height: 1.5;
+        }
+
+        .template-frame {
+            width: 100%;
+            height: calc(100% - 3rem);
+            border: none;
+            border-radius: var(--radius);
+            background: hsl(var(--card));
+            margin-top: 1rem;
+        }
+
+        .template-back-btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.375rem;
+            padding: 0.5rem 1rem;
+            border-radius: var(--radius);
+            border: 1px solid hsl(var(--border));
+            background: hsl(var(--card));
+            color: hsl(var(--foreground));
+            font-size: 0.8rem;
+            cursor: pointer;
+            transition: all 0.15s;
+            margin-top: 0.5rem;
+        }
+
+        .template-back-btn:hover {
+            border-color: hsl(var(--primary));
+            color: hsl(var(--primary));
+        }
+
+        /* Login Modal */
+        .login-modal {
+            position: fixed;
+            top: 0; left: 0;
+            width: 100%; height: 100%;
+            background-color: rgba(0, 0, 0, 0.6);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 2000;
+            opacity: 0;
+            visibility: hidden;
+            transition: opacity 0.3s ease, visibility 0.3s ease;
+        }
+        .login-modal.active { opacity: 1; visibility: visible; }
+        .login-modal-box {
+            background: hsl(var(--card));
+            border-radius: 16px;
+            width: 400px;
+            max-width: 90vw;
+            padding: 40px 36px 32px;
+            border: 1px solid hsl(var(--border));
+            position: relative;
+        }
+        .login-modal-logo {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-bottom: 4px;
+        }
+        .login-modal-logo svg { width: 28px; height: 28px; }
+        .login-modal-logo-text {
+            font-size: 18px;
+            font-weight: 700;
+            background: linear-gradient(135deg, hsl(var(--primary)) 0%, #8b5cf6 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+        .login-modal-title {
+            font-size: 14px;
+            color: hsl(var(--muted-foreground));
+            margin-bottom: 28px;
+        }
+        .login-modal-field { margin-bottom: 18px; }
+        .login-modal-field input {
+            width: 100%;
+            padding: 12px 16px;
+            border-radius: 10px;
+            border: 1px solid hsl(var(--border));
+            background-color: hsl(var(--background));
+            color: hsl(var(--foreground));
+            font-size: 14px;
+            transition: all 0.2s;
+        }
+        .login-modal-field input:focus {
+            outline: none;
+            border-color: hsl(var(--primary));
+            box-shadow: 0 0 0 2px hsl(var(--primary) / 0.2);
+        }
+        .login-modal-field input::placeholder { color: hsl(var(--muted-foreground) / 0.6); }
+        .login-modal-password { position: relative; }
+        .login-modal-password input { padding-right: 44px; }
+        .login-modal-eye {
+            position: absolute;
+            right: 12px; top: 50%;
+            transform: translateY(-50%);
+            background: none; border: none;
+            color: hsl(var(--muted-foreground));
+            cursor: pointer; padding: 4px;
+            display: flex; align-items: center;
+        }
+        .login-modal-eye:hover { color: hsl(var(--foreground)); }
+        .login-modal-submit {
+            width: 100%;
+            padding: 12px;
+            border-radius: 10px;
+            border: none;
+            background: linear-gradient(135deg, hsl(var(--primary)) 0%, #8b5cf6 100%);
+            color: white;
+            font-size: 15px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: opacity 0.2s;
+            margin-top: 8px;
+        }
+        .login-modal-submit:hover { opacity: 0.9; }
+        .login-modal-footer {
+            display: flex;
+            justify-content: space-between;
+            margin-top: 18px;
+            font-size: 13px;
+        }
+        .login-modal-footer a {
+            color: hsl(var(--primary));
+            text-decoration: none;
+            transition: opacity 0.2s;
+        }
+        .login-modal-footer a:hover { opacity: 0.8; }
+        .login-modal-close {
+            position: absolute;
+            top: 16px; right: 16px;
+            background: none; border: none;
+            color: hsl(var(--muted-foreground));
+            font-size: 20px;
+            cursor: pointer; padding: 4px;
+            line-height: 1;
+        }
+        .login-modal-close:hover { color: hsl(var(--foreground)); }
+
+        /* Toast */
+        .toast-container {
+            position: fixed;
+            bottom: 1rem;
+            right: 1rem;
+            z-index: 3000;
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+        }
+        .toast {
+            padding: 1rem 1.5rem;
+            border-radius: var(--radius);
+            background-color: hsl(var(--card));
+            border: 1px solid hsl(var(--border));
+            box-shadow: 0 4px 12px hsl(0 0% 0% / 0.3);
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            animation: slideIn 0.3s ease-out;
+        }
+        .toast-success { border-left: 4px solid hsl(var(--primary)); }
+        .toast-error { border-left: 4px solid hsl(0 84.2% 60.2%); }
+        .toast-icon { width: 1.25rem; height: 1.25rem; flex-shrink: 0; }
+        .toast-message { font-size: 0.875rem; color: hsl(var(--foreground)); }
+        @keyframes slideIn {
+            from { opacity: 0; transform: translateX(100%); }
+            to { opacity: 1; transform: translateX(0); }
+        }
+
+        /* Mobile: hide sidebar, show top bar */
+        @media (max-width: 768px) {
+            .sidebar {
+                transform: translateX(-100%);
+                transition: transform 0.3s ease;
+                z-index: 200;
+            }
+            .sidebar.open {
+                transform: translateX(0);
+            }
+            .main-content {
+                margin-left: 0;
+            }
+            .mobile-topbar {
+                display: flex !important;
+            }
+            .sidebar-overlay {
+                display: block !important;
+            }
+        }
+
+        .mobile-topbar {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 3.5rem;
+            background-color: hsl(var(--card));
+            border-bottom: 1px solid hsl(var(--border));
+            align-items: center;
+            padding: 0 1rem;
+            z-index: 150;
+            gap: 0.75rem;
+        }
+
+        .mobile-topbar-btn {
+            background: none;
+            border: none;
+            color: hsl(var(--foreground));
+            cursor: pointer;
+            padding: 0.25rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .mobile-topbar-title {
+            font-size: 1rem;
+            font-weight: 600;
+            background: linear-gradient(135deg, hsl(var(--primary)) 0%, #8b5cf6 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .sidebar-overlay {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0,0,0,0.5);
+            z-index: 199;
+        }
+
+        @media (max-width: 768px) {
+            .main-content {
+                padding-top: 3.5rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- Mobile Top Bar -->
+    <div class="mobile-topbar" id="mobileTopbar">
+        <button class="mobile-topbar-btn" id="mobileMenuBtn">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <line x1="3" y1="6" x2="21" y2="6"></line>
+                <line x1="3" y1="12" x2="21" y2="12"></line>
+                <line x1="3" y1="18" x2="21" y2="18"></line>
+            </svg>
+        </button>
+        <span class="mobile-topbar-title">ktoonAi</span>
+    </div>
+    <div class="sidebar-overlay" id="sidebarOverlay"></div>
+
+    <!-- Sidebar -->
+    <aside class="sidebar" id="sidebar">
+        <a href="../converted-site/index-converted.html" class="sidebar-logo">
+            <svg class="logo-icon" viewBox="0 0 1024 1024" version="1.1" xmlns="http://www.w3.org/2000/svg">
+                <defs>
+                    <linearGradient id="logo-gradient" x1="0%" y1="0%" x2="100%" y2="100%">
+                        <stop offset="0%" style="stop-color:hsl(190, 100%, 55%)" />
+                        <stop offset="100%" style="stop-color:#8b5cf6" />
+                    </linearGradient>
+                </defs>
+                <path d="M447.21664 393.38496l0.9472-0.768a108.416 108.416 0 0 1 10.89536-7.6032l2.69824 1.35168-1.35168 2.69824c-2.69824 0.90112-4.50048 2.2528-5.4016 4.05504-1.80224 4.5056-4.5056 7.6544-8.10496 9.45664l-1.35168 2.70336c-5.4016 5.4016-10.8032 9.00608-16.20992 10.8032l-4.05504 5.40672-2.69824 10.8032-5.40672 1.3568c-27.91936 18.91328-56.28928 49.98144-85.10464 93.2096v-5.4016A20.03968 20.03968 0 0 1 337.47456 512c7.20384-31.52384 24.76544-57.64096 52.6848-78.35136-11.70944 6.2976-27.91936 23.41376-48.63488 51.33312v-18.91328C418.97984 388.61312 461.312 349.89056 468.51584 349.89056a25.4976 25.4976 0 0 1 8.10496 1.35168L406.3744 417.4336l14.85824-2.69824c0-2.70336 0.90112-5.85728 2.69824-9.45664 2.70336-0.90112 5.85728-1.35168 9.45664-1.35168l1.35168-2.70336v2.70336h1.35168l1.35168 1.35168V399.872l2.70336-4.04992h2.69824l1.35168-5.40672c0.90112-1.80224 2.2528-3.1488 4.05504-4.04992v4.04992c-0.1536 0.60416-0.31232 1.152-0.4864 1.65376l-0.54784 1.31584zM329.3696 563.33312v-6.75328l1.28-1.59232-1.28-6.51264c0-4.32128 0.86528-8.64768 2.59072-12.96896l1.4592-3.24096-1.34656-4.05504c27.91424-27.91936 46.37696-43.67872 55.38304-47.2832l4.05504-14.85824 2.70336 2.70336 27.01824-24.32v-5.4016c13.50656-14.40768 21.61152-22.74304 24.32-24.99072 2.69824-2.2528 5.4016-3.82976 8.09984-4.73088h1.35168l9.45664-5.4016 4.05504-2.70336 2.69824-2.70336c0.90112 0 1.80224 0.90112 2.70336 2.70336-23.41376 16.20992-35.57376 27.4688-36.47488 33.77152-10.8032 13.51168-16.20992 23.41888-16.20992 29.7216L329.3696 563.33312z m14.85824-112.128c6.30784-16.20992 15.75936-27.91424 28.36992-35.1232l-28.3648 35.1232z m-110.77632 341.7856c-1.79712-10.8032-2.69824-20.26496-2.69824-28.3648 0-50.43712 4.5056-83.7632 13.50656-99.97312l-0.896 1.71008-0.03072 0.4864a5516.288 5516.288 0 0 1-5.1712 50.96448l-0.65536 6.28224c-2.70336 27.91936-4.05504 50.88256-4.05504 68.89472z m10.79808 34.43712l0.06656-6.56896c0.47616-31.95904 4.06016-70.51776 10.752-115.67616-7.20384 21.61664-10.8032 34.67264-10.8032 39.17824l-0.01536 83.06688z m-32.39424 74.91072c0.2048-94.8224 2.4576-145.2288 6.73792-151.22432l-6.6816 150.21056-0.0768 1.4336 0.02048-0.41984z m46.3872 46.7712c-3.97824 28.1344-6.38464 47.24224-7.22944 57.32864 3.00544-15.5136 5.59104-35.53792 7.7568-60.0832l0.17408-2.17088-0.70144 4.92544z m5.8368-88.63744l-0.44544 8.9088-0.4608 9.3952c-1.0496 22.24128-2.304 42.2656-3.7632 60.07808l-0.4608 5.25312 0.16896-1.16224c3.60448-27.01824 5.40672-48.1792 5.40672-63.49312l-0.32768-14.82752-0.12288-4.1472z m-3.74784-175.62624l-1.15712 8.9344c-6.33856 51.73248-9.50784 104.61696-9.50784 158.65344l-0.02048-0.16384 0.512-9.3184c3.584-68.77184 6.9632-121.33376 10.14784-157.68576l0.0256-0.41984z m425.22112 191.26784l-2.29376-3.1744c-8.704-12.032-13.6448-20.66432-14.80704-25.9072l2.69824-6.7584 1.3824 3.44576 0.1536 0.42496 2.51904-2.51904h2.70336c0.90112 3.60448 4.95104 8.10496 12.15488 13.50656l-12.15488-16.20992 1.35168 1.35168 1.34656 1.35168v-1.35168l25.67168 25.66656-5.40672-8.10496 20.26496 21.61664c-11.70944-20.71552-28.3648-44.1344-49.98656-70.2464 46.83264 48.62976 83.30752 89.61024 109.42464 122.9312-39.6288-52.23424-67.54304-92.76416-83.75296-121.58464l25.00608 33.78176-0.90112-1.27488c-5.57568-7.76704-9.6256-14.52032-12.16-20.25984l-1.14176-2.7904v-8.10496l13.51168 16.20992-12.16-17.5616 78.35648 91.86304 4.04992-2.69824 3.04128 3.03616 3.71712 3.71712 5.4016 4.04992c-19.8144-19.8144-39.6288-45.48096-59.4432-77.0048a7078.84032 7078.84032 0 0 1-51.33312-85.10464c-94.5664-144.9984-146.35008-223.80032-155.35616-236.41088-17.11104-23.41376-37.82656-34.67264-62.14144-33.77152h-4.05504l-2.69824 1.35168c-0.90112 3.59936-1.35168 5.85216-1.35168 6.75328v4.72576c0 2.2528 0.45056 3.3792 1.35168 3.3792l-20.26496 8.10496 4.04992 17.5616-4.04992 1.35168-5.40672-1.35168c-4.5056 2.70336-6.97856 4.5056-7.424 5.40672-0.45568 0.896-0.68096 2.69824-0.68096 5.4016l-12.15488-2.70336 2.69824 6.7584-4.04992 5.4016v6.7584h-5.40672v2.69824c1.80224 3.59936 1.80224 5.4016 0 5.4016v6.7584l-6.75328 5.4016c0 18.01216 3.60448 33.77152 10.8032 47.2832 23.41888 36.02432 42.33216 62.592 56.74496 79.70304 45.0304 63.04256 114.3808 147.2512 208.04096 252.6208 16.20992 8.11008 28.3648 14.86336 36.47488 20.26496l4.05504-4.04992c11.70432 12.60544 18.01216 18.91328 18.90816 18.91328l1.35168-2.70336v-2.70336c-50.432-53.13536-75.648-84.20864-75.648-93.21472l1.34656-1.34656h1.35168c34.2272 34.22208 59.4432 59.88864 75.65312 77.0048-28.82048-32.42496-52.6848-63.9488-71.59808-94.5664l8.99584 11.52zM286.1568 933.30944l0.84992-5.27872c2.0224-12.35968 3.98336-23.15264 5.888-32.36864-4.50048 5.4016-6.74816 18.46272-6.74816 39.17824l0.01024-1.53088z m-0.26624 1.71008l-3.79904 2.51904c-0.59904 4.20352-0.9984 8.00768-1.2032 11.41248l-0.1536 3.26656 0.00512-2.51904c0-14.1312 1.152-34.4064 3.456-60.81536l0.59904-6.72768c2.69824-29.7216 4.04992-52.23936 4.04992-67.54816l4.05504-4.05504 2.70336 8.10496c-3.60448 8.11008-3.60448 21.61664 0 40.52992 4.50048-62.14144 9.45152-107.17184 14.85824-135.0912 2.70336-30.6176 4.04992-54.03648 4.04992-70.2464 4.5056-29.7216 8.11008-52.23936 10.80832-67.54816 10.80832-17.11104 46.60736-52.23424 107.40224-105.3696 60.78976-53.14048 98.8416-82.86208 114.1504-89.1648 87.35744-75.65312 169.76384-144.54784 247.2192-206.6944 15.3088-17.10592 26.11712-30.16704 32.41984-39.17312-9.00608-18.91328-14.40768-33.77152-16.20992-44.57984-7.20384-14.4128-12.60544-24.76544-16.20992-31.07328l-1.35168 1.35168-5.4016-1.35168h-1.35168c0-0.90112 1.80224-3.1488 5.4016-6.75328l-10.8032 5.4016v-10.8032h-6.7584l-4.04992-8.10496c-2.70336 0-4.95616-0.45056-6.7584-1.35168l-1.34656-1.35168 5.4016-2.70336-9.45664 4.05504-8.10496-4.05504c-42.33216 9.0112-87.36256 36.92544-135.0912 83.75808a7078.144 7078.144 0 0 0-112.128 120.23296C425.728 326.02112 376.20224 381.40928 353.68448 414.73536a90.95168 90.95168 0 0 1-1.35168-14.86336c0-2.69824 4.95616-38.05184 14.86336-106.04544s15.3088-103.3472 16.20992-106.05056c17.11104-52.23424 25.66656-90.0608 25.66656-113.47456C409.07264 24.76544 400.96768 0 384.75264 0h-4.0448c-1.80736 1.80224-2.70848 3.60448-2.70848 5.4016l-2.69824 1.35168-2.70336-4.04992L371.2512 0c-4.5056 4.5056-8.10496 7.6544-10.8032 9.45664l-10.80832-4.05504-8.11008 1.35168-9.45152-4.04992C309.5552 9.00608 291.9936 22.0672 279.38816 41.87648c-12.61056 37.82656-19.36896 66.2016-20.27008 85.10976-11.70432 44.1344-23.8592 119.7824-36.47488 226.95424-10.8032 96.36864-17.5616 176.07168-20.25984 239.11424-1.69472 33.90464-2.59584 102.51264-2.69312 205.824L199.68 887.56224c0.90112 31.51872 1.35168 54.9376 1.35168 70.2464l6.7584-81.0496c0.896 3.59936 1.34656 7.64928 1.34656 12.15488 0 10.8032-1.1264 26.56768-3.3792 47.2832-2.2528 20.7104-3.3792 36.47488-3.3792 47.27808 3.6864-22.84032 6.46656-41.76384 8.3456-56.77056l0.0768-0.6656-0.09216 2.27328-3.99872 89.55904-0.27648 6.13376 24.32-202.63936c0 27.01824 0.45056 43.22816 1.34656 48.63488 1.80224-96.36864 9.9072-184.6272 24.32-264.7808-0.90112 53.13536-0.90112 85.10464 0 95.91296l-0.01024-0.08192 0.06144-2.24256c0.10752-2.4832 0.37888-5.4528 0.81408-8.9088l0.4864-3.62496v-31.07328l1.34656-2.69824 4.2496 2.1248 0.3328-2.5856 0.4096-3.24608 0.4096-3.05152 2.70848-1.34656c0 7.20384 0.45056 17.5616 1.34656 31.06816v28.36992c0 7.20384 0.45056 12.16 1.35168 14.85824-3.59936 37.82656-5.85216 71.15264-6.75328 99.968l0.9216 41.48736-0.02048 0.32768 0.03072-0.21504c2.42176-44.9536 5.46304-79.73376 9.13408-104.35584l0.7424-4.7872v51.33312l2.70336-75.648c0.896-29.7216 4.5056-54.0416 10.8032-72.95488v16.21504l1.35168 10.8032c-6.30272 16.21504-9.45664 42.78272-9.45664 79.70816 0 15.3088 0.45056 25.216 1.35168 29.7216a98.2016 98.2016 0 0 0-4.04992 28.3648v36.47488l2.69824 4.05504v24.32l-9.45664 104.01792 5.40672-39.17824 1.35168 8.10496c0 3.60448-0.45056 9.68192-1.35168 18.23744-0.90112 8.55552-1.35168 15.08864-1.35168 19.58912l-0.01024-0.02048 5.41184-26.99776-4.02944 44.26752 1.08544-8.61184c1.46944-11.72992 2.9184-22.76352 4.33664-33.09568l0.86016-6.15424 0.45056 0.896-0.38912-1.37216 0.14336-0.99328c1.05472-7.48544 2.0992-14.58176 3.1232-21.28384l0.9216-5.888z" fill="url(#logo-gradient)" p-id="5410"></path>
+            </svg>
+            <span class="sidebar-logo-text">ktoonAi</span>
+        </a>
+
+        <nav class="sidebar-nav">
+            <div class="sidebar-section-label">创作工具</div>
+
+            <button class="sidebar-item active" data-page="new-page.html" onclick="loadPage(this)">
+                <svg class="sidebar-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M12 19l7-7 3 3-7 7-3-3z"></path>
+                    <path d="M18 13l-1.5-7.5L2 2l3.5 14.5L13 18l5-5z"></path>
+                    <path d="M2 2l7.586 7.586"></path>
+                    <circle cx="11" cy="11" r="2"></circle>
+                </svg>
+                <span>AI 绘图</span>
+            </button>
+
+            <button class="sidebar-item" data-page="video-generation.html" onclick="loadPage(this)">
+                <svg class="sidebar-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <polygon points="5 3 19 12 5 21 5 3"></polygon>
+                </svg>
+                <span>AI 视频</span>
+            </button>
+
+            <button class="sidebar-item" data-page="ecommerce-tools.html" onclick="loadPage(this)">
+                <svg class="sidebar-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"></path>
+                    <line x1="3" y1="6" x2="21" y2="6"></line>
+                    <path d="M16 10a4 4 0 0 1-8 0"></path>
+                </svg>
+                <span>电商工具</span>
+            </button>
+
+            <button class="sidebar-item" data-page="templates" onclick="loadPage(this)">
+                <svg class="sidebar-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <rect x="3" y="3" width="7" height="7"></rect>
+                    <rect x="14" y="3" width="7" height="7"></rect>
+                    <rect x="14" y="14" width="7" height="7"></rect>
+                    <rect x="3" y="14" width="7" height="7"></rect>
+                </svg>
+                <span>模板创作</span>
+            </button>
+
+            <div class="sidebar-divider"></div>
+            <div class="sidebar-section-label">其他</div>
+
+            <a href="../converted-site/index-converted.html" class="sidebar-item">
+                <svg class="sidebar-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path>
+                    <polyline points="9 22 9 12 15 12 15 22"></polyline>
+                </svg>
+                <span>返回首页</span>
+            </a>
+        </nav>
+
+        <div class="sidebar-bottom">
+            <div class="sidebar-points" id="sidebarPoints" style="display: none;" onclick="openRecharge()">
+                <svg class="sidebar-points-icon" viewBox="0 0 1024 1024" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M110.126829 152.210732c11.676098-4.885854 24.148293-7.68 36.714147-9.069269 21.681951-1.810732 43.145366 2.965854 64.124878 7.867317 6.618537 1.139512 12.16 5.307317 18.669268 6.821464 6.618537 1.623415 12.956098 4.167805 18.731707 7.789268 17.170732 7.539512 33.436098 17.014634 49.092683 27.301464 12.612683 6.540488 23.04 16.421463 35.21561 23.68 7.898537 6.087805 15.297561 12.83122 23.477073 18.591219 8.007805 6.602927 15.703415 13.596098 23.726829 20.199025 14.033171 13.627317 29.112195 26.146341 42.193171 40.757073 7.383415 6.649756 13.065366 14.922927 20.433171 21.588292 22.306341 25.287805 43.50439 51.621463 62.001951 79.843903 4.589268 5.713171 7.508293 12.534634 12.17561 18.185366 10.20878-14.954146 19.761951-30.423415 30.860488-44.8 11.051707-15.750244 23.71122-30.236098 36.089756-44.924878 6.556098-8.444878 14.829268-15.32878 21.416585-23.742439 11.972683-11.988293 23.367805-24.600976 36.386342-35.480976 5.822439-5.166829 10.86439-11.207805 17.139512-15.875122 8.007805-6.36878 15.297561-13.627317 23.711219-19.496585 7.68-5.822439 14.548293-12.753171 22.852683-17.717074 10.22439-6.961951 19.730732-15.047805 30.72-20.839024 16.062439-10.552195 32.796098-20.089756 50.357073-27.925854 5.713171-3.746341 12.269268-5.72878 18.809756-7.523902 5.619512-1.451707 10.458537-5.010732 16.187318-6.134634 15.890732-3.777561 31.937561-7.383415 48.296585-8.382439 17.998049-1.061463 36.120976 2.325854 52.854634 8.897561 19.777561 10.708293 34.919024 28.597073 45.080976 48.437073 2.997073 7.851707 4.963902 16.093659 8.679024 23.68 6.025366 22.696585 7.617561 46.267317 8.97561 69.635122 1.201951 41.272195-0.187317 82.762927-7.274147 123.48878-0.936585 6.38439-4.183415 12.081951-5.494634 18.372683-2.279024 8.679024-3.82439 17.810732-8.663414 25.537561-3.043902 6.883902-5.354146 14.09561-9.943415 20.183415-15.047805 28.440976-39.773659 51.028293-68.433171 65.29561-10.052683 6.306341-21.947317 8.085854-32.749268 12.612683-5.510244 1.982439-11.348293 2.762927-17.139512 3.418536 10.25561 9.303415 19.902439 19.434146 27.473171 31.094634 4.760976 6.462439 8.085854 13.830244 12.565853 20.49561 3.137561 7.242927 5.338537 14.860488 8.663415 22.040976 7.851707 25.927805 7.929756 53.74439 2.825366 80.218536-0.889756 9.084878-5.416585 17.139512-7.836098 25.818537-2.840976 9.709268-7.633171 18.653659-12.284878 27.566829-5.260488 7.882927-8.241951 17.201951-14.844878 24.179512-19.153171 25.912195-42.770732 49.030244-70.977561 64.858537-8.054634 5.635122-17.88878 7.742439-26.24 12.831219-26.115122 8.054634-54.087805 12.487805-81.24878 7.617561-13.080976-2.388293-26.567805-4.417561-38.353171-10.895609-20.46439-8.148293-38.602927-21.13561-55.102439-35.574634-9.709268-9.084878-18.747317-18.872195-28.019512-28.394147-6.899512-10.520976-15.890732-19.527805-22.43122-30.329756-5.026341-5.853659-7.617561-13.315122-12.909268-18.950244-5.276098 5.650732-7.898537 13.096585-12.909268 18.950244-6.321951 10.489756-15.016585 19.23122-21.744391 29.42439-19.028293 20.589268-38.930732 41.256585-63.797073 54.821464-8.694634 6.165854-19.028293 9.194146-28.456585 13.970731-24.382439 7.617561-50.481951 11.395122-75.894634 7.352196-12.238049-1.857561-24.507317-4.292683-36.183415-8.398049-7.352195-4.604878-16.01561-6.493659-23.320976-11.145366-44.113171-24.96-78.891707-65.514146-98.310244-112.234146-1.966829-6.134634-3.996098-12.253659-6.743414-18.076098-7.726829-30.04878-9.147317-62.236098-0.546342-92.284878 2.622439-7.274146 5.619512-14.407805 8.36683-21.650732 10.25561-20.042927 23.836098-38.462439 40.819512-53.338536-6.540488-0.764878-13.205854-1.592195-19.278049-4.261464-9.974634-4.370732-21.276098-5.572683-30.329756-12.003902-9.459512-4.058537-17.701463-10.161951-26.25561-15.750244-20.636098-17.717073-38.571707-39.118049-49.763902-64.062439-3.18439-7.851707-7.601951-15.203902-9.475122-23.539512-1.576585-7.336585-4.839024-14.158049-6.727805-21.385366-5.77561-31.875122-8.710244-64.312195-8.132683-96.718049-0.483902-29.736585 1.092683-59.582439 6.38439-88.881951 0.749268-5.166829 1.841951-10.364878 4.183415-15.079025 3.574634-7.274146 4.854634-15.406829 8.30439-22.712195 10.146341-18.653659 24.663415-35.293659 43.254634-45.845853m31.687805 54.415609c-4.558049 3.23122-10.193171 5.463415-13.205854 10.442927-3.574634 6.056585-5.962927 12.721951-8.803902 19.137561-4.089756 12.425366-4.885854 25.61561-6.618537 38.493659-2.809756 10.25561-1.607805 20.979512-2.653658 31.453658-1.467317 17.139512 0.327805 34.294634 0.905366 51.434147 0.140488 4.136585 1.732683 8.007805 2.232195 12.097561 0.764878 14.033171 2.684878 28.113171 6.197073 41.724878 4.074146 8.772683 5.026341 18.684878 9.756098 27.176585 2.950244 5.198049 4.901463 10.88 7.914146 16.03122 3.949268 6.602927 9.428293 12.050732 14.204878 18.029268 9.646829 8.554146 20.120976 16.452683 32.280976 21.041951 11.691707 6.524878 25.443902 5.962927 38.056585 9.412683 11.239024 1.545366 22.680976 2.263415 34.013659 1.123902 7.773659-0.280976 15.609756-0.468293 23.133658-2.638048 11.379512-0.530732 22.883902-4.042927 34.216585-1.32683 7.945366 1.810732 13.47122 8.444878 18.216586 14.595122 5.635122 6.930732 4.433171 16.577561 3.512195 24.835122-3.246829 9.381463-11.317073 16.546341-20.120976 20.776586-20.370732 9.350244-40.195122 20.120976-57.927805 33.92-10.614634 6.805854-18.794146 16.530732-27.644878 25.350244-15.687805 18.965854-25.974634 43.769756-22.977561 68.698536 1.639024 10.146341 1.685854 20.870244 6.44683 30.220488 3.980488 7.836098 5.213659 16.952195 10.817561 23.960976 15.890732 29.705366 42.037073 53.494634 72.491707 67.652683 9.756098 3.106341 19.262439 7.523902 29.642927 8.117073 15.125854 2.060488 30.345366-0.874146 44.394146-6.478049 25.880976-10.926829 47.750244-29.877073 65.170732-51.699512 20.058537-23.320976 33.982439-50.919024 48.546341-77.767805 2.403902-4.839024 3.590244-10.427317 7.461464-14.376586 4.199024-4.339512 8.30439-9.412683 14.329756-11.192195 11.285854-3.590244 25.240976-1.795122 32.999024 7.929756 7.960976 6.212683 9.069268 16.718049 14.407805 24.710244 13.143415 24.585366 26.427317 49.404878 44.675122 70.680976 19.980488 24.913171 45.830244 46.610732 76.909268 55.69561 26.20878 7.773659 54.4 0.202927 77.299513-13.424391 23.882927-14.517073 44.19122-35.090732 57.709268-59.613658 5.432195-8.023415 7.601951-17.592195 11.894634-26.193171 6.056585-20.074146 7.992195-41.912195 2.013659-62.251707-6.072195-15.562927-14.72-30.189268-26.224391-42.380488-19.512195-18.044878-41.553171-33.420488-65.545366-44.956097-10.380488-5.76-23.352195-9.131707-29.549268-20.214635-7.69561-10.552195-6.212683-26.052683 2.279025-35.715122 3.918049-4.089756 7.836098-8.803902 13.533658-10.333658 11.691707-3.715122 23.836098 0.249756 35.699512 0.733658 10.677073 3.059512 21.884878 2.294634 32.858537 3.090732 7.804878-0.421463 15.656585-0.483902 23.414634-1.404878 13.877073-3.340488 28.76878-3.590244 41.521951-10.661463 16.999024-6.321951 31.438049-18.481951 41.927805-33.139513 3.886829-5.213659 6.165854-11.379512 9.475122-16.936585 4.839024-7.633171 5.276098-16.983415 9.147317-25.038049 5.10439-14.766829 5.79122-30.579512 7.960976-45.939512 2.825366-10.146341 1.748293-20.792195 2.965853-31.157073 0.124878-15.079024 0.62439-30.204878-0.686829-45.252683-0.327805-6.837073-0.296585-13.767805-2.279024-20.370732-1.873171-12.378537-2.154146-25.225366-6.493659-37.08878-2.794146-5.447805-4.167805-11.48878-7.00878-16.889756-5.322927-7.836098-13.393171-14.860488-23.242927-15.547317-12.737561-0.874146-25.662439 0.796098-37.603903 5.354146-8.117073 1.748293-15.937561 4.355122-23.367804 8.023415-10.052683 2.684878-18.762927 8.35122-28.222439 12.456585-34.903415 18.778537-66.481951 43.020488-96.452683 68.807805-7.352195 7.742439-16.062439 14.033171-23.414635 21.77561-13.533659 13.533659-27.50439 26.708293-39.804878 41.397073-12.17561 14.376585-24.92878 28.362927-35.418536 44.035122-17.873171 23.570732-33.873171 48.733659-45.830244 75.816585-5.322927 9.147317-5.916098 20.885854-14.08 28.316098-9.646829 6.993171-22.618537 9.927805-34.029268 5.71317-6.696585-1.779512-11.52-7.04-15.875122-12.097561-4.261463-5.541463-4.058537-13.018537-7.555122-18.950243-4.573659-7.274146-6.275122-15.96878-11.613659-22.821464-3.590244-8.148293-8.32-15.656585-13.018536-23.196097-7.04-10.442927-13.299512-21.385366-21.073171-31.328781-19.85561-25.724878-40.429268-51.043902-63.781464-73.709268-26.005854-26.786341-54.446829-51.090732-84.495609-73.225366-24.835122-17.26439-50.57561-33.90439-79.094634-44.487805-9.61561-4.714146-20.433171-5.806829-30.360976-9.646829-11.957073-2.497561-24.569756-3.761951-36.558049-0.811708z" fill="currentColor"/>
+                </svg>
+                <span class="sidebar-points-label">积分</span>
+                <span class="sidebar-points-value" id="sidebarPointsValue">0</span>
+                <svg style="width:1rem;height:1rem;opacity:0.6;flex-shrink:0;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg>
+            </div>
+            <div class="sidebar-user" id="sidebarUser" onclick="handleUserClick()">
+                <div class="sidebar-avatar" id="sidebarAvatar">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                        <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
+                        <circle cx="12" cy="7" r="4"/>
+                    </svg>
+                </div>
+                <div>
+                    <div class="sidebar-username" id="sidebarUsername">未登录</div>
+                    <div class="sidebar-login-hint" id="sidebarLoginHint">点击登录</div>
+                </div>
+            </div>
+        </div>
+    </aside>
+
+    <!-- Main Content -->
+    <main class="main-content" id="mainContent">
+        <iframe id="contentFrame" src="new-page.html"></iframe>
+
+        <!-- Templates Section (embedded) -->
+        <div id="templatesSection" class="templates-section" style="display: none;">
+            <div class="templates-header">
+                <h2 class="templates-title">模板创作</h2>
+                <p class="templates-subtitle">选择一个模板，快速生成创意内容</p>
+            </div>
+            <div class="templates-grid">
+                <div class="template-card" onclick="loadTemplate('../converted-site/template-photo-restoration.html')">
+                    <svg class="template-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
+                        <circle cx="8.5" cy="8.5" r="1.5"></circle>
+                        <polyline points="21 15 16 10 5 21"></polyline>
+                    </svg>
+                    <h3 class="template-card-title">老照片修复</h3>
+                    <p class="template-card-desc">上传老照片，一键修复恢复清晰度和细节</p>
+                </div>
+                <div class="template-card" onclick="loadTemplate('../converted-site/template-sticker.html')">
+                    <svg class="template-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <circle cx="12" cy="12" r="10"></circle>
+                        <path d="M8 14s1.5 2 4 2 4-2 4-2"></path>
+                        <line x1="9" y1="9" x2="9.01" y2="9"></line>
+                        <line x1="15" y1="9" x2="15.01" y2="9"></line>
+                    </svg>
+                    <h3 class="template-card-title">表情包生成</h3>
+                    <p class="template-card-desc">上传图片，生成有趣的表情包</p>
+                </div>
+                <div class="template-card" onclick="loadTemplate('../converted-site/template-logo.html')">
+                    <svg class="template-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/>
+                    </svg>
+                    <h3 class="template-card-title">Logo制作</h3>
+                    <p class="template-card-desc">输入关键字，生成专业的Logo设计</p>
+                </div>
+                <div class="template-card" onclick="loadTemplate('../converted-site/template-hd-restoration.html')">
+                    <svg class="template-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <circle cx="12" cy="12" r="10"></circle>
+                        <path d="M12 6v6l4 2"></path>
+                    </svg>
+                    <h3 class="template-card-title">高清修复</h3>
+                    <p class="template-card-desc">使用 nano-banana 模型进行高清修复</p>
+                </div>
+                <div class="template-card" onclick="loadTemplate('../converted-site/template-id-photo.html')">
+                    <svg class="template-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
+                        <circle cx="12" cy="10" r="3"></circle>
+                        <path d="M7 21v-2a5 5 0 0 1 10 0v2"></path>
+                    </svg>
+                    <h3 class="template-card-title">证件照</h3>
+                    <p class="template-card-desc">上传生活照，一键生成标准证件照</p>
+                </div>
+                <div class="template-card" onclick="loadTemplate('../converted-site/template-text-poster.html')">
+                    <svg class="template-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
+                        <line x1="7" y1="8" x2="17" y2="8"></line>
+                        <line x1="7" y1="12" x2="14" y2="12"></line>
+                        <line x1="7" y1="16" x2="11" y2="16"></line>
+                    </svg>
+                    <h3 class="template-card-title">文字海报</h3>
+                    <p class="template-card-desc">输入主题和文字，AI生成精美海报</p>
+                </div>
+                <div class="template-card" onclick="loadTemplate('../converted-site/template-chibi-figurine.html')">
+                    <svg class="template-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <circle cx="12" cy="8" r="5"></circle>
+                        <path d="M7 21v-2a5 5 0 0 1 10 0v2"></path>
+                        <circle cx="10" cy="7" r="1" fill="currentColor"></circle>
+                        <circle cx="14" cy="7" r="1" fill="currentColor"></circle>
+                        <path d="M10 9.5c0 0 1 1 2 1s2-1 2-1"></path>
+                    </svg>
+                    <h3 class="template-card-title">Q版人偶</h3>
+                    <p class="template-card-desc">上传照片，生成可爱的Q版迷你人偶</p>
+                </div>
+                <div class="template-card" onclick="loadTemplate('../converted-site/template-figurine.html')">
+                    <svg class="template-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <rect x="8" y="2" width="8" height="4" rx="1"></rect>
+                        <rect x="6" y="6" width="12" height="14" rx="2"></rect>
+                        <rect x="4" y="20" width="16" height="2" rx="1"></rect>
+                    </svg>
+                    <h3 class="template-card-title">人物手办</h3>
+                    <p class="template-card-desc">上传照片，生成逼真1/7比例手办模型</p>
+                </div>
+            </div>
+            <!-- Template sub-page iframe -->
+            <iframe id="templateFrame" class="template-frame" style="display: none;"></iframe>
+            <button id="templateBackBtn" class="template-back-btn" style="display: none;" onclick="backToTemplates()">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="15 18 9 12 15 6"/></svg>
+                返回模板列表
+            </button>
+        </div>
+    </main>
+
+    <!-- Login Modal -->
+    <div class="login-modal" id="loginModal">
+        <div class="login-modal-box">
+            <button class="login-modal-close" id="loginModalClose">&times;</button>
+            <div class="login-modal-logo">
+                <img src="yangpian/LOGO/K.svg" width="28" height="28" alt="ktoonAi">
+                <span class="login-modal-logo-text">Ktoonai</span>
+            </div>
+            <div class="login-modal-title">欢迎登录Ktoonai</div>
+            <div class="login-modal-field">
+                <input type="text" id="loginUsername" placeholder="请输入用户名" autocomplete="username">
+            </div>
+            <div class="login-modal-field login-modal-password">
+                <input type="password" id="loginPassword" placeholder="请输入密码" autocomplete="current-password">
+                <button class="login-modal-eye" id="loginEyeToggle" type="button">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+                </button>
+            </div>
+            <button class="login-modal-submit" id="loginSubmit">登录</button>
+            <div class="login-modal-footer">
+                <a href="../converted-site/forgot-password.html">忘记密码?</a>
+                <a href="../converted-site/register.html">没有账号?</a>
+            </div>
+        </div>
+    </div>
+
+    <script src="js/points.js"></script>
+    <script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // --- Sidebar navigation ---
+        var contentFrame = document.getElementById('contentFrame');
+        var templatesSection = document.getElementById('templatesSection');
+        var templateFrame = document.getElementById('templateFrame');
+        var templateBackBtn = document.getElementById('templateBackBtn');
+        var sidebarItems = document.querySelectorAll('.sidebar-item[data-page]');
+
+        function loadPage(el) {
+            var page = el.getAttribute('data-page');
+            if (!page) return;
+            sidebarItems.forEach(function(item) { item.classList.remove('active'); });
+            el.classList.add('active');
+
+            if (page === 'templates') {
+                // Show templates section, hide iframe
+                contentFrame.style.display = 'none';
+                templatesSection.style.display = 'block';
+                // Reset template sub-view
+                templateFrame.style.display = 'none';
+                templateBackBtn.style.display = 'none';
+                templatesSection.querySelector('.templates-grid').style.display = '';
+                templatesSection.querySelector('.templates-header').style.display = '';
+            } else {
+                // Show iframe, hide templates section
+                templatesSection.style.display = 'none';
+                contentFrame.style.display = 'block';
+                // Pass URL params (prompt, model) to iframe if present
+                var iframeParams = new URLSearchParams();
+                var promptParam = urlParams.get('prompt');
+                var modelParam = urlParams.get('model');
+                if (promptParam) iframeParams.set('prompt', promptParam);
+                if (modelParam) iframeParams.set('model', modelParam);
+                var qs = iframeParams.toString();
+                contentFrame.src = qs ? page + '?' + qs : page;
+            }
+            // Remember current section for refresh
+            localStorage.setItem('ktoon_workspace_section', page);
+            // Close mobile sidebar
+            document.getElementById('sidebar').classList.remove('open');
+        }
+        // Expose loadPage globally for onclick
+        window.loadPage = loadPage;
+
+        // --- Recharge page ---
+        window.openRecharge = function() {
+            var loggedIn = localStorage.getItem('ktoon_logged_in');
+            if (!loggedIn) { showToast('请先登录', 'error'); return; }
+            // Hide templates section, show iframe
+            templatesSection.style.display = 'none';
+            templateFrame.style.display = 'none';
+            templateBackBtn.style.display = 'none';
+            contentFrame.style.display = 'block';
+            contentFrame.src = 'recharge.html';
+            // Deactivate all sidebar items
+            sidebarItems.forEach(function(item) { item.classList.remove('active'); });
+            document.getElementById('sidebar').classList.remove('open');
+        };
+
+        // --- Template sub-page loading ---
+        window.loadTemplate = function(url) {
+            templatesSection.querySelector('.templates-grid').style.display = 'none';
+            templatesSection.querySelector('.templates-header').style.display = 'none';
+            templateFrame.src = url;
+            templateFrame.style.display = 'block';
+            templateBackBtn.style.display = 'inline-flex';
+        };
+
+        window.backToTemplates = function() {
+            templateFrame.style.display = 'none';
+            templateBackBtn.style.display = 'none';
+            templatesSection.querySelector('.templates-grid').style.display = '';
+            templatesSection.querySelector('.templates-header').style.display = '';
+        };
+
+        // --- Mobile sidebar toggle ---
+        var mobileMenuBtn = document.getElementById('mobileMenuBtn');
+        var sidebar = document.getElementById('sidebar');
+        var sidebarOverlay = document.getElementById('sidebarOverlay');
+
+        mobileMenuBtn.addEventListener('click', function() {
+            sidebar.classList.toggle('open');
+        });
+        sidebarOverlay.addEventListener('click', function() {
+            sidebar.classList.remove('open');
+        });
+
+        // --- URL parameter: pre-select sidebar item ---
+        var urlParams = new URLSearchParams(window.location.search);
+        var section = urlParams.get('section');
+        if (section) {
+            var target = document.querySelector('.sidebar-item[data-page="' + section + '"]');
+            if (target) {
+                loadPage(target);
+            }
+        } else {
+            // Restore last section from localStorage
+            var savedSection = localStorage.getItem('ktoon_workspace_section');
+            if (savedSection) {
+                var target = document.querySelector('.sidebar-item[data-page="' + savedSection + '"]');
+                if (target) {
+                    loadPage(target);
+                }
+            }
+        }
+
+        // --- Login system ---
+        function showToast(message, type) {
+            type = type || 'success';
+            var container = document.querySelector('.toast-container');
+            if (!container) {
+                container = document.createElement('div');
+                container.className = 'toast-container';
+                document.body.appendChild(container);
+            }
+            var toast = document.createElement('div');
+            toast.className = 'toast toast-' + type;
+            var icon = type === 'success'
+                ? '<svg class="toast-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg>'
+                : '<svg class="toast-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>';
+            toast.innerHTML = icon + '<span class="toast-message">' + message + '</span>';
+            container.appendChild(toast);
+            setTimeout(function() {
+                toast.style.opacity = '0';
+                toast.style.transform = 'translateX(100%)';
+                setTimeout(function() { toast.remove(); }, 300);
+            }, 3000);
+        }
+
+        var loginModal = document.getElementById('loginModal');
+        var loginModalClose = document.getElementById('loginModalClose');
+        var loginEyeToggle = document.getElementById('loginEyeToggle');
+        var loginPassword = document.getElementById('loginPassword');
+        var loginSubmit = document.getElementById('loginSubmit');
+
+        function openLoginModal() { loginModal.classList.add('active'); }
+        function closeLoginModal() { loginModal.classList.remove('active'); }
+
+        loginModalClose.addEventListener('click', closeLoginModal);
+        loginModal.addEventListener('click', function(e) {
+            if (e.target === loginModal) closeLoginModal();
+        });
+
+        loginEyeToggle.addEventListener('click', function() {
+            var isPassword = loginPassword.type === 'password';
+            loginPassword.type = isPassword ? 'text' : 'password';
+            loginEyeToggle.innerHTML = isPassword
+                ? '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/></svg>'
+                : '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>';
+        });
+
+        loginSubmit.addEventListener('click', function() {
+            var username = document.getElementById('loginUsername').value.trim();
+            var password = loginPassword.value.trim();
+            if (!username) { showToast('请输入用户名', 'error'); return; }
+            if (!password) { showToast('请输入密码', 'error'); return; }
+
+            var validUsers = { '情绪过度老师': '12345678' };
+            var stored = JSON.parse(localStorage.getItem('ktoon_users') || '[]');
+            stored.forEach(function(u) { validUsers[u.username] = u.password; });
+
+            if (validUsers[username] && validUsers[username] === password) {
+                localStorage.setItem('ktoon_logged_in', username);
+                // 确保老用户也有积分
+                if (window.KtoonPoints) {
+                    window.KtoonPoints.init(username);
+                }
+                showToast('登录成功！', 'success');
+                closeLoginModal();
+                updateLoginUI();
+            } else {
+                showToast('用户名或密码错误', 'error');
+            }
+        });
+
+        function updateLoginUI() {
+            var loggedIn = localStorage.getItem('ktoon_logged_in');
+            var users = JSON.parse(localStorage.getItem('ktoon_users') || '[]');
+            var currentUser = null;
+            if (loggedIn) {
+                for (var i = 0; i < users.length; i++) {
+                    if (users[i].username === loggedIn) { currentUser = users[i]; break; }
+                }
+            }
+            var avatarEl = document.getElementById('sidebarAvatar');
+            var nameEl = document.getElementById('sidebarUsername');
+            var hintEl = document.getElementById('sidebarLoginHint');
+            var pointsEl = document.getElementById('sidebarPoints');
+            var pointsValueEl = document.getElementById('sidebarPointsValue');
+
+            if (loggedIn) {
+                var avatarSrc = null;
+                if (loggedIn === '情绪过度老师') {
+                    avatarSrc = 'yangpian/主用户/主用户头像.png';
+                } else if (currentUser && currentUser.avatar) {
+                    avatarSrc = currentUser.avatar;
+                }
+                if (avatarSrc) {
+                    avatarEl.innerHTML = '<img src="' + avatarSrc + '" alt="avatar">';
+                }
+                nameEl.textContent = loggedIn;
+                hintEl.textContent = '个人主页';
+                hintEl.style.color = 'hsl(var(--primary))';
+                // 显示积分
+                pointsEl.style.display = '';
+                if (window.KtoonPoints) {
+                    pointsValueEl.textContent = window.KtoonPoints.get();
+                }
+            } else {
+                nameEl.textContent = '未登录';
+                hintEl.textContent = '点击登录';
+                hintEl.style.color = '';
+                pointsEl.style.display = 'none';
+            }
+        }
+
+        // 积分变化时刷新显示
+        window.refreshPointsDisplay = function() {
+            var loggedIn = localStorage.getItem('ktoon_logged_in');
+            if (!loggedIn) return;
+            var pointsValueEl = document.getElementById('sidebarPointsValue');
+            if (pointsValueEl && window.KtoonPoints) {
+                pointsValueEl.textContent = window.KtoonPoints.get();
+            }
+        };
+
+        window.handleUserClick = function() {
+            var loggedIn = localStorage.getItem('ktoon_logged_in');
+            if (loggedIn) {
+                window.open('../converted-site/my-profile.html', '_blank');
+            } else {
+                openLoginModal();
+            }
+        };
+
+        updateLoginUI();
+    });
+    </script>
+</body>
+</html>

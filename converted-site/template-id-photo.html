@@ -1,0 +1,710 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>ktoonAi - 证件照</title>
+    <meta name="description" content="ktoonAi证件照 - 上传生活照，一键生成标准证件照">
+    <link rel="icon" type="image/x-icon" href="/favicon.ico">
+
+    <style>
+        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+        html { scrollbar-width: none; }
+        html::-webkit-scrollbar { display: none; }
+
+        :root {
+            --background: 230 25% 7%;
+            --foreground: 220 20% 92%;
+            --card: 230 20% 12%;
+            --primary: 190 100% 55%;
+            --primary-foreground: 230 25% 7%;
+            --muted: 230 15% 18%;
+            --muted-foreground: 220 10% 55%;
+            --border: 230 15% 20%;
+            --radius: 0.5rem;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            background-color: hsl(var(--background));
+            color: hsl(var(--foreground));
+            line-height: 1.6;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            overflow-y: scroll;
+            scrollbar-width: none;
+        }
+
+        body::-webkit-scrollbar { display: none; }
+
+        .main-content {
+            flex: 1;
+            max-width: 640px;
+            margin: 0 auto;
+            padding: 2rem 1rem;
+            width: 100%;
+        }
+
+        .page-header {
+            text-align: center;
+            margin-bottom: 2rem;
+        }
+
+        .page-title {
+            font-size: 1.75rem;
+            font-weight: 700;
+            margin-bottom: 0.5rem;
+            background: linear-gradient(135deg, hsl(var(--primary)) 0%, #8b5cf6 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .page-subtitle {
+            font-size: 0.95rem;
+            color: hsl(var(--muted-foreground));
+        }
+
+        .template-card {
+            background: hsl(var(--card));
+            border: 1px solid hsl(var(--border));
+            border-radius: 12px;
+            padding: 2rem;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 1.25rem;
+        }
+
+        .template-icon {
+            width: 48px;
+            height: 48px;
+            color: hsl(var(--primary));
+        }
+
+        /* Upload Area */
+        .image-upload-area {
+            width: 100%;
+            border: 2px dashed hsl(var(--border));
+            border-radius: 12px;
+            padding: 2.5rem 1rem;
+            text-align: center;
+            cursor: pointer;
+            transition: border-color 0.2s, background-color 0.2s;
+        }
+
+        .image-upload-area:hover {
+            border-color: hsl(var(--primary));
+            background-color: hsl(var(--primary) / 0.05);
+        }
+
+        .upload-placeholder-icon {
+            font-size: 2.5rem;
+            color: hsl(var(--muted-foreground));
+            margin-bottom: 0.5rem;
+        }
+
+        .upload-placeholder-text {
+            font-size: 1rem;
+            font-weight: 500;
+            color: hsl(var(--foreground));
+            margin-bottom: 0.25rem;
+        }
+
+        .upload-placeholder-hint {
+            font-size: 0.8rem;
+            color: hsl(var(--muted-foreground));
+        }
+
+        /* Preview */
+        .image-preview-container {
+            width: 100%;
+            position: relative;
+        }
+
+        .image-preview-container img {
+            width: 100%;
+            max-height: 300px;
+            object-fit: contain;
+            border-radius: 8px;
+            border: 1px solid hsl(var(--border));
+        }
+
+        .remove-preview {
+            position: absolute;
+            top: 8px;
+            right: 8px;
+            width: 28px;
+            height: 28px;
+            border-radius: 50%;
+            border: none;
+            background: rgba(0,0,0,0.6);
+            color: white;
+            font-size: 16px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            line-height: 1;
+        }
+
+        .remove-preview:hover { background: rgba(0,0,0,0.8); }
+
+        /* Color preview dots */
+        .color-options {
+            display: flex;
+            gap: 16px;
+            margin-top: 8px;
+        }
+
+        .color-option {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            cursor: pointer;
+            font-size: 0.85rem;
+            color: hsl(var(--muted-foreground));
+        }
+
+        .color-dot {
+            width: 22px;
+            height: 22px;
+            border-radius: 50%;
+            border: 2px solid hsl(var(--border));
+            transition: border-color 0.2s, box-shadow 0.2s;
+            position: relative;
+        }
+
+        .color-option.active .color-dot {
+            border-color: hsl(var(--primary));
+            box-shadow: 0 0 0 2px hsl(var(--primary) / 0.3);
+        }
+
+        .color-option.active .color-dot::after {
+            content: '';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: hsl(var(--primary));
+            transform: translate(-50%, -50%);
+        }
+
+        .color-dot.white { background: #ffffff; }
+        .color-dot.red { background: #d32f2f; }
+        .color-dot.blue { background: #1976d2; }
+
+        /* Generate Button */
+        .template-button {
+            width: 100%;
+            padding: 12px;
+            border-radius: 10px;
+            border: none;
+            background: linear-gradient(135deg, hsl(var(--primary)) 0%, #8b5cf6 100%);
+            color: white;
+            font-size: 15px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: opacity 0.2s, transform 0.1s;
+        }
+
+        .template-button:hover { opacity: 0.9; }
+        .template-button:active { transform: scale(0.98); }
+        .template-button:disabled { opacity: 0.5; cursor: not-allowed; }
+
+        /* Result Section */
+        .result-section {
+            margin-top: 1.5rem;
+            text-align: center;
+        }
+
+        .result-title {
+            font-size: 1rem;
+            font-weight: 600;
+            margin-bottom: 1rem;
+            color: hsl(var(--foreground));
+        }
+
+        .result-placeholder {
+            width: 100%;
+            height: 200px;
+            border: 1px solid hsl(var(--border));
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: hsl(var(--muted) / 0.3);
+        }
+
+        .loading {
+            width: 36px;
+            height: 36px;
+            border: 3px solid hsl(var(--border));
+            border-top-color: hsl(var(--primary));
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+        }
+
+        @keyframes spin { to { transform: rotate(360deg); } }
+
+        .result-image {
+            max-width: 100%;
+            max-height: 400px;
+            border-radius: 8px;
+            border: 1px solid hsl(var(--border));
+        }
+
+        .result-status {
+            margin-top: 0.75rem;
+            font-size: 0.875rem;
+            color: hsl(var(--muted-foreground));
+        }
+
+        .image-actions {
+            display: flex;
+            gap: 10px;
+            margin-top: 1rem;
+            justify-content: center;
+        }
+
+        .image-actions button {
+            padding: 8px 20px;
+            border-radius: 8px;
+            border: none;
+            font-size: 13px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: opacity 0.2s;
+        }
+
+        .image-actions button:hover { opacity: 0.9; }
+
+        .btn-secondary {
+            background: hsl(var(--muted));
+            color: hsl(var(--foreground));
+        }
+
+        .btn-primary-action {
+            background: linear-gradient(135deg, hsl(var(--primary)) 0%, #8b5cf6 100%);
+            color: white;
+        }
+
+        /* Publish Modal */
+        .publish-modal {
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.6);
+            display: flex; align-items: center; justify-content: center;
+            z-index: 2000;
+            opacity: 0; visibility: hidden;
+            transition: opacity 0.3s, visibility 0.3s;
+        }
+
+        .publish-modal.active { opacity: 1; visibility: visible; }
+
+        .publish-modal-content {
+            background: hsl(var(--card));
+            border: 1px solid hsl(var(--border));
+            border-radius: 16px;
+            width: 420px; max-width: 90vw;
+            padding: 28px;
+            position: relative;
+        }
+
+        .publish-modal-close {
+            position: absolute; top: 14px; right: 14px;
+            background: none; border: none;
+            color: hsl(var(--muted-foreground));
+            font-size: 20px; cursor: pointer; padding: 4px; line-height: 1;
+        }
+
+        .publish-modal-close:hover { color: hsl(var(--foreground)); }
+
+        .publish-modal-image-wrap {
+            width: 100%; border-radius: 10px; overflow: hidden;
+            margin-bottom: 16px; border: 1px solid hsl(var(--border));
+        }
+
+        .publish-modal-image-wrap img {
+            width: 100%; display: block;
+        }
+
+        .publish-modal-label {
+            font-size: 13px; font-weight: 500; margin-bottom: 6px;
+            color: hsl(var(--foreground));
+        }
+
+        .publish-modal-input {
+            width: 100%; padding: 10px 14px;
+            border-radius: 10px; border: 1px solid hsl(var(--border));
+            background: hsl(var(--background)); color: hsl(var(--foreground));
+            font-size: 14px; font-family: inherit; outline: none;
+            margin-bottom: 14px; box-sizing: border-box;
+        }
+
+        .publish-modal-input:focus { border-color: hsl(var(--primary)); }
+
+        .publish-modal-prompt {
+            font-size: 12px; color: hsl(var(--muted-foreground));
+            background: hsl(var(--muted) / 0.4); padding: 10px;
+            border-radius: 8px; margin-bottom: 16px;
+            max-height: 60px; overflow-y: auto;
+            word-break: break-all;
+        }
+
+        .publish-modal-actions {
+            display: flex; gap: 10px; justify-content: flex-end;
+        }
+
+        .publish-modal-actions button {
+            padding: 9px 22px; border-radius: 10px; border: none;
+            font-size: 14px; font-weight: 600; cursor: pointer;
+            transition: opacity 0.2s;
+        }
+
+        .publish-modal-actions button:hover { opacity: 0.9; }
+
+        .hidden { display: none !important; }
+
+        /* Back Button */
+        .back-button {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            margin-top: 0.5rem;
+            font-size: 0.875rem;
+            color: hsl(var(--muted-foreground));
+            text-decoration: none;
+            cursor: pointer;
+            transition: color 0.2s;
+        }
+
+        .back-button:hover { color: hsl(var(--primary)); }
+    </style>
+</head>
+<body>
+    <main class="main-content">
+        <div class="page-header">
+            <h1 class="page-title">证件照生成</h1>
+            <p class="page-subtitle">上传生活照，一键生成标准证件照</p>
+        </div>
+
+        <div class="template-card">
+            <svg class="template-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
+                <circle cx="12" cy="10" r="3"></circle>
+                <path d="M7 21v-2a5 5 0 0 1 10 0v2"></path>
+            </svg>
+
+            <!-- Upload Area -->
+            <div class="image-upload-area" id="upload-area" onclick="document.getElementById('photo-upload').click()">
+                <div class="upload-placeholder-icon">+</div>
+                <div class="upload-placeholder-text">上传生活照生成证件照</div>
+                <div class="upload-placeholder-hint">支持 JPG, PNG 格式</div>
+                <input type="file" id="photo-upload" accept="image/*" style="display: none;" onchange="handleUpload(event)">
+            </div>
+
+            <!-- Preview -->
+            <div class="image-preview-container" id="preview-container" style="display: none;">
+                <img id="preview-image" src="" alt="预览">
+                <button class="remove-preview" onclick="removePreview()">&times;</button>
+            </div>
+
+            <!-- Background Color -->
+            <div class="form-group">
+                <label>背景颜色</label>
+                <div class="color-options">
+                    <div class="color-option active" onclick="selectColor(this, '白色')">
+                        <span class="color-dot white"></span>
+                        <span>白色</span>
+                    </div>
+                    <div class="color-option" onclick="selectColor(this, '红色')">
+                        <span class="color-dot red"></span>
+                        <span>红色</span>
+                    </div>
+                    <div class="color-option" onclick="selectColor(this, '蓝色')">
+                        <span class="color-dot blue"></span>
+                        <span>蓝色</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Generate Button -->
+            <button class="template-button" onclick="generate()" id="generate-btn" disabled>
+                生成证件照 <span style="font-size:0.75rem;opacity:0.8;">(-2积分)</span>
+            </button>
+
+            <a class="back-button" onclick="window.parent.backToTemplates()">
+                ← 返回模板列表
+            </a>
+        </div>
+
+        <!-- Result Section -->
+        <div class="result-section hidden" id="result-section">
+            <h3 class="result-title">生成结果</h3>
+            <div class="result-placeholder" id="result-placeholder">
+                <div class="loading"></div>
+            </div>
+            <img class="result-image hidden" id="result-image" src="" alt="生成结果">
+            <p class="result-status" id="result-status"></p>
+            <div class="image-actions hidden" id="image-actions">
+                <button class="btn-secondary" onclick="downloadImage()">下载图片</button>
+                <button class="btn-primary-action" onclick="openPublishModal()">发布</button>
+            </div>
+        </div>
+
+        <!-- Publish Modal -->
+        <div class="publish-modal" id="publishModal">
+            <div class="publish-modal-content">
+                <button class="publish-modal-close" onclick="closePublishModal()">&times;</button>
+                <div class="publish-modal-image-wrap">
+                    <img id="publishModalImage" src="" alt="">
+                </div>
+                <div class="publish-modal-label">标题 <span style="color:hsl(0 84% 60%)">*</span></div>
+                <input class="publish-modal-input" id="publishModalTitle" type="text" placeholder="请输入标题">
+                <div class="publish-modal-label">提示词</div>
+                <div class="publish-modal-prompt" id="publishModalPrompt"></div>
+                <div class="publish-modal-actions">
+                    <button class="btn-secondary" onclick="closePublishModal()">取消</button>
+                    <button class="btn-primary-action" onclick="submitPublish()">发布</button>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <script src="../ai-image-tool/js/points.js"></script>
+    <script>
+        // API Configuration
+        const API_CONFIG = {
+            'doubao-4.0-i2i': {
+                type: 'image-to-image',
+                model: 'doubao-seedream-4-0-250828',
+                multiImage: false
+            }
+        };
+
+        var uploadedFile = null;
+        var selectedColor = '白色';
+
+        function selectColor(el, color) {
+            selectedColor = color;
+            document.querySelectorAll('.color-option').forEach(function(opt) {
+                opt.classList.remove('active');
+            });
+            el.classList.add('active');
+        }
+
+        function handleUpload(e) {
+            var file = e.target.files[0];
+            if (!file) return;
+            uploadedFile = file;
+
+            var reader = new FileReader();
+            reader.onload = function(ev) {
+                document.getElementById('preview-image').src = ev.target.result;
+                document.getElementById('preview-container').style.display = 'block';
+                document.getElementById('upload-area').style.display = 'none';
+                document.getElementById('generate-btn').disabled = false;
+            };
+            reader.readAsDataURL(file);
+        }
+
+        function removePreview() {
+            uploadedFile = null;
+            document.getElementById('photo-upload').value = '';
+            document.getElementById('preview-container').style.display = 'none';
+            document.getElementById('upload-area').style.display = '';
+            document.getElementById('generate-btn').disabled = true;
+        }
+
+        function showResult() {
+            var section = document.getElementById('result-section');
+            section.classList.remove('hidden');
+            setTimeout(function() { section.scrollIntoView({ behavior: 'smooth', block: 'center' }); }, 100);
+        }
+
+        function updateStatus(msg) {
+            document.getElementById('result-status').textContent = msg;
+        }
+
+        function showLoading() {
+            document.getElementById('result-placeholder').classList.remove('hidden');
+            document.getElementById('result-image').classList.add('hidden');
+            updateStatus('正在生成中，请稍候...');
+        }
+
+        function showResultImage(imageUrl) {
+            document.getElementById('result-placeholder').classList.add('hidden');
+            var img = document.getElementById('result-image');
+            img.src = imageUrl;
+            img.classList.remove('hidden');
+            document.getElementById('image-actions').classList.remove('hidden');
+            updateStatus('生成完成！');
+        }
+
+        async function downloadImage() {
+            var imageUrl = document.getElementById('result-image').src;
+            if (!imageUrl) return;
+            try {
+                var resp = await fetch(imageUrl);
+                var blob = await resp.blob();
+                var url = URL.createObjectURL(blob);
+                var a = document.createElement('a');
+                a.href = url;
+                a.download = 'ktoonai-idphoto-' + Date.now() + '.png';
+                a.click();
+                URL.revokeObjectURL(url);
+            } catch (e) {
+                var a = document.createElement('a');
+                a.href = '/proxy-download?url=' + encodeURIComponent(imageUrl);
+                a.download = 'ktoonai-idphoto-' + Date.now() + '.png';
+                a.click();
+            }
+        }
+
+        function openPublishModal() {
+            var imageUrl = document.getElementById('result-image').src;
+            if (!imageUrl) return;
+            document.getElementById('publishModalImage').src = imageUrl;
+            document.getElementById('publishModalTitle').value = '';
+            var prompt = '真实棚拍写真，前卫艺术风格写真，主体身着白衬衫、红条纹领带，外搭黑色制服，位于画面中心，半身证件照构图，人物面部美化，' + selectedColor + '背景';
+            document.getElementById('publishModalPrompt').textContent = prompt;
+            document.getElementById('publishModal').classList.add('active');
+        }
+
+        function closePublishModal() {
+            document.getElementById('publishModal').classList.remove('active');
+        }
+
+        function submitPublish() {
+            var title = document.getElementById('publishModalTitle').value.trim();
+            if (!title) {
+                document.getElementById('publishModalTitle').style.borderColor = 'hsl(0 84.2% 60.2%)';
+                setTimeout(function() {
+                    document.getElementById('publishModalTitle').style.borderColor = '';
+                }, 2000);
+                return;
+            }
+            var imageUrl = document.getElementById('result-image').src;
+            var prompt = '真实棚拍写真，前卫艺术风格写真，主体身着白衬衫、红条纹领带，外搭黑色制服，位于画面中心，半身证件照构图，人物面部美化，' + selectedColor + '背景';
+            var loggedIn = localStorage.getItem('ktoon_logged_in') || '匿名用户';
+            var avatar = '';
+            if (loggedIn === '情绪过度老师') {
+                avatar = '../ai-image-tool/yangpian/主用户/主用户头像.png';
+            } else {
+                var users = JSON.parse(localStorage.getItem('ktoon_users') || '[]');
+                for (var i = 0; i < users.length; i++) {
+                    if (users[i].username === loggedIn && users[i].avatar) {
+                        avatar = users[i].avatar;
+                        break;
+                    }
+                }
+            }
+            var works = JSON.parse(localStorage.getItem('ktoon_published_works') || '[]');
+            works.unshift({
+                id: Date.now(),
+                title: title,
+                image: imageUrl,
+                prompt: prompt,
+                username: loggedIn,
+                avatar: avatar,
+                timestamp: Date.now()
+            });
+            localStorage.setItem('ktoon_published_works', JSON.stringify(works));
+            closePublishModal();
+            alert('发布成功！');
+        }
+
+        async function generate() {
+            if (!uploadedFile) {
+                alert('请先上传生活照');
+                return;
+            }
+
+            // 积分检查
+            if (window.KtoonPoints) {
+                var loggedIn = localStorage.getItem('ktoon_logged_in');
+                if (!loggedIn) {
+                    alert('请先登录');
+                    return;
+                }
+                var result = window.KtoonPoints.deduct('template');
+                if (!result.ok) {
+                    alert('积分不足，证件照生成需要 2 积分，当前剩余 ' + result.remaining + ' 积分');
+                    return;
+                }
+                if (window.parent && window.parent.refreshPointsDisplay) {
+                    window.parent.refreshPointsDisplay();
+                }
+            }
+
+            var prompt = '真实棚拍写真，前卫艺术风格写真，主体身着白衬衫、红条纹领带，外搭黑色制服，位于画面中心，半身证件照构图，人物面部美化，' + selectedColor + '背景';
+
+            showResult();
+            showLoading();
+
+            try {
+                var response = await callImageAPI(prompt, uploadedFile);
+                showResultImage(response.imageUrl);
+            } catch (error) {
+                updateStatus('生成失败：' + error.message);
+                if (window.KtoonPoints) {
+                    KtoonPoints.refund('template');
+                    if (window.parent && window.parent.refreshPointsDisplay) window.parent.refreshPointsDisplay();
+                }
+            }
+        }
+
+        async function callImageAPI(prompt, imageFile) {
+            var config = API_CONFIG['doubao-4.0-i2i'];
+
+            var base64Image = await new Promise(function(resolve, reject) {
+                var reader = new FileReader();
+                reader.onload = function() { resolve(reader.result); };
+                reader.onerror = reject;
+                reader.readAsDataURL(imageFile);
+            });
+
+            var requestData = {
+                model: config.model,
+                prompt: prompt,
+                response_format: "url",
+                image: base64Image
+            };
+
+            var proxyResponse = await fetch('/api-proxy', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    model: 'doubao-4.0-i2i',
+                    data: requestData
+                })
+            });
+
+            if (!proxyResponse.ok) {
+                var errorText = await proxyResponse.text();
+                throw new Error('代理请求失败: ' + proxyResponse.status + ' - ' + errorText);
+            }
+
+            var data = await proxyResponse.json();
+
+            var imageUrl;
+            if (data.data && data.data[0] && data.data[0].url) {
+                imageUrl = data.data[0].url;
+            } else if (data.url) {
+                imageUrl = data.url;
+            } else if (data.data && Array.isArray(data.data) && data.data[0]) {
+                imageUrl = data.data[0];
+            } else {
+                throw new Error('无法从响应中获取图片 URL');
+            }
+
+            return { imageUrl: imageUrl };
+        }
+    </script>
+</body>
+</html>

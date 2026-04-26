@@ -1,0 +1,1546 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>个人主页 - ktoonAi</title>
+    <link rel="icon" type="image/x-icon" href="/favicon.ico">
+    <style>
+        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+        :root {
+            --bg: 230 25% 7%; --fg: 220 20% 92%; --card: 230 20% 12%;
+            --border: 230 15% 20%; --muted: 230 15% 18%; --muted-fg: 220 10% 55%;
+            --primary: 190 100% 55%; --primary-fg: 230 25% 7%; --radius: 0.75rem;
+            --destructive: 0 84.2% 60.2%;
+        }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            background: hsl(var(--bg)); color: hsl(var(--fg)); min-height: 100vh;
+        }
+        /* Navbar */
+        .navbar {
+            position: fixed; top: 0; left: 0; right: 0; z-index: 50;
+            border-bottom: 1px solid hsl(var(--border) / 0.5);
+            background-color: hsl(var(--bg) / 0.6); backdrop-filter: blur(12px);
+        }
+        .navbar-container {
+            max-width: 900px; margin: 0 auto; padding: 0 1rem;
+            height: 4rem; display: flex; align-items: center; justify-content: space-between;
+        }
+        .logo {
+            display: flex; align-items: center; gap: 0.5rem;
+            text-decoration: none; color: inherit;
+        }
+        .logo-icon { width: 1.5rem; height: 1.5rem; }
+        .logo-text {
+            font-size: 1.125rem; font-weight: 700;
+            background: linear-gradient(135deg, hsl(var(--primary)) 0%, #8b5cf6 100%);
+            -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
+        }
+        .nav-right { display: flex; align-items: center; gap: 12px; }
+        .btn-back {
+            color: hsl(var(--muted-fg)); text-decoration: none; font-size: 13px;
+            padding: 6px 12px; border-radius: var(--radius); transition: color 0.2s;
+        }
+        .btn-back:hover { color: hsl(var(--fg)); }
+
+        /* Profile Header */
+        .profile-header {
+            max-width: 900px; margin: 0 auto; padding: 80px 2rem 1.5rem;
+            display: flex; align-items: center; gap: 20px; position: relative;
+        }
+        .profile-avatar {
+            width: 72px; height: 72px; border-radius: 50%; object-fit: cover;
+            border: 2px solid hsl(var(--border)); flex-shrink: 0;
+        }
+        .profile-avatar-placeholder {
+            width: 72px; height: 72px; border-radius: 50%; flex-shrink: 0;
+            background: hsl(var(--muted)); border: 2px dashed hsl(var(--border));
+            display: flex; align-items: center; justify-content: center;
+        }
+        .profile-avatar-placeholder svg { width: 28px; height: 28px; color: hsl(var(--muted-fg)); }
+        .profile-info { flex: 1; }
+        .profile-name { font-size: 20px; font-weight: 700; margin-bottom: 2px; }
+        .profile-stats {
+            display: flex; gap: 16px; font-size: 13px; color: hsl(var(--muted-fg)); margin-top: 6px;
+        }
+        .profile-stats span { color: hsl(var(--fg)); font-weight: 600; }
+
+        /* Settings */
+        .settings-wrap { position: relative; }
+        .settings-btn {
+            background: none; border: 1px solid hsl(var(--border)); color: hsl(var(--muted-fg));
+            width: 36px; height: 36px; border-radius: 50%; cursor: pointer;
+            display: flex; align-items: center; justify-content: center; transition: all 0.2s;
+        }
+        .settings-btn:hover { color: hsl(var(--fg)); border-color: hsl(var(--primary)); }
+        .settings-btn svg { width: 18px; height: 18px; }
+        .settings-dropdown {
+            position: absolute; right: 0; top: 44px; width: 160px;
+            background: hsl(var(--card)); border: 1px solid hsl(var(--border));
+            border-radius: var(--radius); overflow: hidden; z-index: 100;
+            display: none; box-shadow: 0 8px 24px rgba(0,0,0,0.4);
+        }
+        .settings-dropdown.show { display: block; }
+        .settings-item {
+            display: flex; align-items: center; gap: 8px; padding: 10px 14px;
+            font-size: 13px; color: hsl(var(--fg)); cursor: pointer; border: none;
+            background: none; width: 100%; text-align: left; transition: background 0.15s;
+        }
+        .settings-item:hover { background: hsl(var(--muted)); }
+        .settings-item svg { width: 16px; height: 16px; color: hsl(var(--muted-fg)); }
+        .settings-item.danger { color: hsl(var(--destructive)); }
+        .settings-item.danger svg { color: hsl(var(--destructive)); }
+
+        /* Tabs */
+        .profile-tabs {
+            max-width: 900px; margin: 0 auto; padding: 0 2rem;
+            display: flex; gap: 0; border-bottom: 1px solid hsl(var(--border));
+        }
+        .profile-tab {
+            padding: 12px 20px; font-size: 14px; color: hsl(var(--muted-fg));
+            cursor: pointer; border-bottom: 2px solid transparent;
+            transition: color 0.2s, border-color 0.2s;
+        }
+        .profile-tab.active { color: hsl(var(--fg)); border-bottom-color: hsl(var(--primary)); }
+        .profile-tab .count { margin-left: 4px; font-size: 12px; }
+
+        /* Gallery */
+        .gallery {
+            max-width: 900px; margin: 0 auto; padding: 1.5rem 2rem 4rem;
+            column-count: 3; column-gap: 0.75rem;
+        }
+        @media (max-width: 768px) { .gallery { column-count: 2; } }
+        @media (max-width: 480px) { .gallery { column-count: 2; padding: 1rem; } }
+
+        .work-card {
+            background: hsl(var(--card)); border-radius: var(--radius);
+            overflow: hidden; border: 1px solid hsl(var(--border));
+            cursor: pointer; break-inside: avoid; margin-bottom: 0.75rem;
+            transition: transform 0.2s;
+        }
+        .work-card:hover { transform: translateY(-2px); }
+        .work-card img { width: 100%; display: block; }
+        .work-card .work-info { padding: 8px 10px; }
+        .work-card .work-title {
+            font-size: 12px; color: hsl(var(--muted-fg));
+            white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+        }
+        .work-card .work-meta {
+            font-size: 11px; color: #666; display: flex; align-items: center;
+            gap: 3px; margin-top: 3px;
+        }
+
+        /* Empty state */
+        .empty-state {
+            max-width: 900px; margin: 0 auto; padding: 4rem 2rem;
+            text-align: center; color: hsl(var(--muted-fg)); font-size: 14px;
+        }
+        .empty-state svg { width: 48px; height: 48px; margin-bottom: 12px; opacity: 0.4; }
+
+        /* Modal */
+        .modal {
+            position: fixed; inset: 0; z-index: 999; display: none;
+            background: rgba(0,0,0,0.85); justify-content: center; align-items: center;
+        }
+        .modal.active { display: flex; }
+        .modal-content {
+            display: flex; width: 90vw; max-width: 1000px;
+            max-height: 90vh; background: hsl(var(--card)); border-radius: 12px;
+            overflow: hidden; position: relative;
+        }
+        .modal-image-wrap {
+            flex: 1 1 60%; display: flex; align-items: center;
+            justify-content: center; background: #111; min-height: 300px;
+        }
+        .modal-image { max-width: 100%; max-height: 85vh; object-fit: contain; }
+        .modal-info {
+            flex: 1 1 40%; display: flex; flex-direction: column;
+            overflow: hidden; min-width: 280px;
+        }
+        .modal-close {
+            position: absolute; top: 12px; right: 12px; z-index: 10;
+            width: 32px; height: 32px; border-radius: 50%;
+            background: rgba(0,0,0,0.5); border: none; color: #fff;
+            font-size: 20px; cursor: pointer; display: flex;
+            align-items: center; justify-content: center;
+        }
+
+        /* 作者栏 */
+        .modal-author-bar {
+            display: flex; align-items: center; gap: 10px;
+            padding: 16px 50px 16px 20px; border-bottom: 1px solid hsl(var(--border)); flex-shrink: 0;
+        }
+        .modal-author-avatar {
+            width: 36px; height: 36px; border-radius: 50%;
+            object-fit: cover; border: 1px solid hsl(var(--primary));
+        }
+        .modal-author-name { font-size: 14px; font-weight: 600; color: hsl(var(--fg)); }
+        .follow-btn {
+            margin-left: auto; padding: 4px 16px; border-radius: 16px;
+            border: 1px solid hsl(var(--primary)); background: transparent;
+            color: hsl(var(--primary)); font-size: 12px; cursor: pointer;
+            transition: all 0.2s; flex-shrink: 0;
+        }
+        .follow-btn:hover { background: hsl(var(--primary)); color: hsl(var(--primary-fg)); }
+        .follow-btn.followed { background: hsl(var(--muted)); border-color: hsl(var(--border)); color: hsl(var(--muted-fg)); }
+        .follow-btn.followed:hover { background: hsl(var(--destructive) / 0.1); border-color: hsl(var(--destructive)); color: hsl(var(--destructive)); }
+
+        /* 标题 */
+        .modal-title-bar { padding: 16px 20px 8px; flex-shrink: 0; }
+        .modal-title { font-size: 16px; font-weight: 600; color: hsl(var(--fg)); margin: 0; }
+
+        /* 中间可滚动区域 */
+        .modal-middle {
+            flex: 1; overflow-y: auto; display: flex; flex-direction: column;
+        }
+
+        .modal-prompt-section { flex-shrink: 0; padding: 8px 20px 16px; }
+        .modal-prompt-label {
+            font-size: 12px; color: hsl(var(--muted-fg)); margin-bottom: 8px;
+            display: flex; align-items: center; gap: 4px;
+        }
+        .modal-prompt-text { font-size: 13px; line-height: 1.7; color: hsl(var(--fg)); word-break: break-all; }
+        .modal-action-bar {
+            display: flex; align-items: center; gap: 16px;
+            padding: 12px 20px; border-top: 1px solid hsl(var(--border)); flex-shrink: 0;
+        }
+        .modal-action-btn {
+            display: flex; align-items: center; gap: 4px;
+            background: none; border: none; color: hsl(var(--muted-fg));
+            font-size: 13px; cursor: pointer; padding: 4px 8px;
+            border-radius: 6px; transition: color 0.2s, background 0.2s;
+        }
+        .modal-action-btn:hover { color: hsl(var(--fg)); background: rgba(255,255,255,0.05); }
+        .modal-action-btn svg { width: 16px; height: 16px; }
+        .modal-action-btn.liked { color: #ff4757; }
+        .modal-action-btn.liked svg { fill: #ff4757; stroke: #ff4757; }
+
+        /* 评论区域 */
+        .modal-comment-section { border-top: 1px solid hsl(var(--border)); flex-shrink: 0; }
+        .modal-comment-header {
+            font-size: 12px; font-weight: 500; color: hsl(var(--muted-fg));
+            padding: 12px 20px 8px; display: flex; align-items: center; gap: 6px;
+        }
+        .modal-comment-list { max-height: 200px; overflow-y: auto; padding: 0 20px; }
+        .modal-comment-list::-webkit-scrollbar { width: 4px; }
+        .modal-comment-list::-webkit-scrollbar-thumb { background: hsl(var(--border)); border-radius: 2px; }
+        .modal-comment-item { display: flex; gap: 10px; padding: 10px 0; border-bottom: 1px solid hsl(var(--border) / 0.5); }
+        .modal-comment-item:last-child { border-bottom: none; }
+        .modal-comment-avatar { width: 28px; height: 28px; border-radius: 50%; object-fit: cover; flex-shrink: 0; }
+        .modal-comment-body { flex: 1; min-width: 0; }
+        .modal-comment-username { font-size: 12px; font-weight: 600; color: hsl(var(--fg)); margin-bottom: 2px; }
+        .modal-comment-text { font-size: 13px; line-height: 1.5; color: hsl(var(--fg) / 0.8); word-break: break-all; }
+        .modal-comment-time { font-size: 11px; color: hsl(var(--muted-fg)); margin-top: 3px; }
+
+        /* 评论输入 */
+        .modal-comment-input-wrap {
+            display: flex; align-items: center; gap: 8px;
+            padding: 10px 20px; border-top: 1px solid hsl(var(--border));
+        }
+        .modal-comment-input-avatar { width: 28px; height: 28px; border-radius: 50%; object-fit: cover; flex-shrink: 0; }
+        .modal-comment-input {
+            flex: 1; background: hsl(var(--muted)); border: 1px solid hsl(var(--border));
+            border-radius: 20px; padding: 6px 14px; font-size: 13px;
+            color: hsl(var(--fg)); outline: none; transition: border-color 0.2s;
+        }
+        .modal-comment-input:focus { border-color: hsl(var(--primary)); }
+        .modal-comment-input::placeholder { color: hsl(var(--muted-fg)); }
+        .modal-comment-send {
+            background: hsl(var(--primary)); color: hsl(var(--primary-fg));
+            border: none; border-radius: 16px; padding: 6px 16px;
+            font-size: 13px; cursor: pointer; flex-shrink: 0; transition: opacity 0.2s;
+        }
+        .modal-comment-send:hover { opacity: 0.85; }
+        .modal-comment-login-hint {
+            padding: 10px 20px; text-align: center; font-size: 13px;
+            color: hsl(var(--muted-fg)); border-top: 1px solid hsl(var(--border));
+        }
+        .modal-comment-login-hint a { color: hsl(var(--primary)); text-decoration: none; }
+
+        @media (max-width: 768px) {
+            .modal-content { flex-direction: column; }
+            .modal-image-wrap { max-height: 50vh; }
+            .modal-info { min-width: unset; }
+            .modal-comment-list { max-height: 150px; }
+            .profile-header { flex-direction: column; text-align: center; }
+            .profile-stats { justify-content: center; }
+        }
+
+        /* Toast */
+        .toast-container {
+            position: fixed; bottom: 1rem; right: 1rem; z-index: 3000;
+            display: flex; flex-direction: column; gap: 0.5rem;
+        }
+        .toast {
+            padding: 1rem 1.5rem; border-radius: var(--radius);
+            background-color: hsl(var(--bg)); border: 1px solid hsl(var(--border));
+            box-shadow: 0 4px 12px rgba(0,0,0,0.3); display: flex;
+            align-items: center; gap: 0.75rem; animation: slideIn 0.3s ease-out;
+        }
+        .toast-success { border-left: 4px solid hsl(var(--primary)); }
+        .toast-error { border-left: 4px solid hsl(var(--destructive)); }
+        .toast-icon { width: 1.25rem; height: 1.25rem; }
+        .toast-message { font-size: 0.875rem; color: hsl(var(--fg)); }
+        @keyframes slideIn {
+            from { opacity: 0; transform: translateX(100%); }
+            to { opacity: 1; transform: translateX(0); }
+        }
+
+        /* Login Modal */
+        .login-modal {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background-color: rgba(0,0,0,0.6); display: flex; align-items: center;
+            justify-content: center; z-index: 2000; opacity: 0; visibility: hidden;
+            transition: opacity 0.3s ease, visibility 0.3s ease;
+        }
+        .login-modal.active { opacity: 1; visibility: visible; }
+        .login-modal-box {
+            background: hsl(var(--card)); border-radius: 16px; width: 400px;
+            max-width: 90vw; padding: 40px 36px 32px; border: 1px solid hsl(var(--border)); position: relative;
+        }
+        .login-modal-logo { display: flex; align-items: center; gap: 8px; margin-bottom: 4px; }
+        .login-modal-logo svg { width: 28px; height: 28px; }
+        .login-modal-logo-text {
+            font-size: 18px; font-weight: 700;
+            background: linear-gradient(135deg, hsl(var(--primary)) 0%, #8b5cf6 100%);
+            -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
+        }
+        .login-modal-title { font-size: 14px; color: hsl(var(--muted-fg)); margin-bottom: 28px; }
+        .login-modal-field { margin-bottom: 18px; }
+        .login-modal-field input {
+            width: 100%; padding: 12px 16px; border-radius: 10px;
+            border: 1px solid hsl(var(--border)); background-color: hsl(var(--bg));
+            color: hsl(var(--fg)); font-size: 14px; transition: all 0.2s;
+        }
+        .login-modal-field input:focus {
+            outline: none; border-color: hsl(var(--primary));
+            box-shadow: 0 0 0 2px hsl(var(--primary) / 0.2);
+        }
+        .login-modal-field input::placeholder { color: hsl(var(--muted-fg) / 0.6); }
+        .login-modal-password { position: relative; }
+        .login-modal-password input { padding-right: 44px; }
+        .login-modal-eye {
+            position: absolute; right: 12px; top: 50%; transform: translateY(-50%);
+            background: none; border: none; color: hsl(var(--muted-fg));
+            cursor: pointer; padding: 4px; display: flex; align-items: center;
+        }
+        .login-modal-eye:hover { color: hsl(var(--fg)); }
+        .login-modal-submit {
+            width: 100%; padding: 12px; border-radius: 10px; border: none;
+            background: linear-gradient(135deg, hsl(var(--primary)) 0%, #8b5cf6 100%);
+            color: white; font-size: 15px; font-weight: 600; cursor: pointer;
+            transition: opacity 0.2s; margin-top: 8px;
+        }
+        .login-modal-submit:hover { opacity: 0.9; }
+        .login-modal-footer {
+            display: flex; justify-content: space-between; margin-top: 18px; font-size: 13px;
+        }
+        .login-modal-footer a {
+            color: hsl(var(--primary)); text-decoration: none; transition: opacity 0.2s;
+        }
+        .login-modal-footer a:hover { opacity: 0.8; }
+        .login-modal-close {
+            position: absolute; top: 16px; right: 16px; background: none; border: none;
+            color: hsl(var(--muted-fg)); font-size: 20px; cursor: pointer; padding: 4px; line-height: 1;
+        }
+        .login-modal-close:hover { color: hsl(var(--fg)); }
+
+        /* Profile Edit Modal */
+        .profile-modal {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background-color: rgba(0,0,0,0.6); display: flex; align-items: center;
+            justify-content: center; z-index: 3000; opacity: 0; visibility: hidden;
+            transition: opacity 0.3s ease, visibility 0.3s ease;
+        }
+        .profile-modal.active { opacity: 1; visibility: visible; }
+        .profile-modal-box {
+            background: hsl(var(--card)); border-radius: 16px; width: 420px;
+            max-width: 92vw; padding: 36px 32px 28px;
+            border: 1px solid hsl(var(--border)); position: relative;
+        }
+        .profile-modal-close {
+            position: absolute; top: 14px; right: 14px; background: none; border: none;
+            color: hsl(var(--muted-fg)); font-size: 20px; cursor: pointer; padding: 4px; line-height: 1;
+        }
+        .profile-modal-close:hover { color: hsl(var(--fg)); }
+        .profile-modal-title {
+            font-size: 18px; font-weight: 700; margin-bottom: 6px;
+            background: linear-gradient(135deg, hsl(var(--primary)) 0%, #8b5cf6 100%);
+            -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
+        }
+        .profile-modal-subtitle { font-size: 13px; color: hsl(var(--muted-fg)); margin-bottom: 24px; }
+        .profile-avatar-section {
+            position: relative; display: flex; flex-direction: column;
+            align-items: center; margin-bottom: 24px;
+        }
+        .profile-edit-avatar-wrapper {
+            position: relative; width: 80px; height: 80px; cursor: pointer;
+        }
+        .profile-edit-avatar-placeholder {
+            width: 80px; height: 80px; border-radius: 50%; background: hsl(var(--muted));
+            border: 2px dashed hsl(var(--border)); display: flex;
+            align-items: center; justify-content: center; transition: border-color 0.2s;
+        }
+        .profile-edit-avatar-wrapper:hover .profile-edit-avatar-placeholder { border-color: hsl(var(--primary)); }
+        .profile-edit-avatar-placeholder svg { width: 28px; height: 28px; color: hsl(var(--muted-fg)); }
+        .profile-edit-avatar-img {
+            width: 80px; height: 80px; border-radius: 50%; object-fit: cover;
+            border: 2px solid hsl(var(--primary) / 0.5);
+        }
+        .profile-avatar-hint { font-size: 12px; color: hsl(var(--muted-fg)); margin-top: 8px; }
+        .profile-field { margin-bottom: 16px; }
+        .profile-field label {
+            display: block; font-size: 13px; font-weight: 500;
+            color: hsl(var(--muted-fg)); margin-bottom: 6px;
+        }
+        .profile-field input {
+            width: 100%; padding: 10px 14px; border-radius: 10px;
+            border: 1px solid hsl(var(--border)); background-color: hsl(var(--bg));
+            color: hsl(var(--fg)); font-size: 14px; transition: all 0.2s;
+        }
+        .profile-field input:focus {
+            outline: none; border-color: hsl(var(--primary));
+            box-shadow: 0 0 0 2px hsl(var(--primary) / 0.2);
+        }
+        .profile-submit {
+            width: 100%; padding: 12px; border-radius: 10px; border: none;
+            background: linear-gradient(135deg, hsl(var(--primary)) 0%, #8b5cf6 100%);
+            color: white; font-size: 15px; font-weight: 600; cursor: pointer;
+            transition: opacity 0.2s; margin-top: 8px;
+        }
+        .profile-submit:hover { opacity: 0.9; }
+        .profile-skip {
+            display: block; text-align: center; margin-top: 12px; font-size: 13px;
+            color: hsl(var(--muted-fg)); cursor: pointer; background: none;
+            border: none; width: 100%;
+        }
+        .profile-skip:hover { color: hsl(var(--fg)); }
+
+        /* Login Avatar */
+        .login-avatar {
+            width: 36px; height: 36px; border-radius: 50%; object-fit: cover;
+            border: 1px solid hsl(var(--primary)); cursor: pointer;
+            transition: transform 0.2s; display: inline-block;
+        }
+        .login-avatar:hover { transform: scale(1.08); }
+        .btn-primary[data-logged-in="true"] { background: transparent; padding: 0; border: none; box-shadow: none; }
+        .btn-primary[data-logged-in="true"]:hover { transform: scale(1.08); }
+        .login-avatar-placeholder {
+            width: 36px; height: 36px; border-radius: 50%; background: hsl(var(--muted));
+            border: 1px solid hsl(var(--border)); display: inline-flex;
+            align-items: center; justify-content: center; cursor: pointer; transition: transform 0.2s;
+        }
+        .login-avatar-placeholder:hover { transform: scale(1.08); }
+        .login-avatar-placeholder svg { width: 18px; height: 18px; color: hsl(var(--muted-fg)); }
+
+        /* 确认弹窗 */
+        .confirm-overlay { position: fixed; inset: 0; z-index: 2000; background: rgba(0,0,0,0.5); display: flex; align-items: center; justify-content: center; }
+        .confirm-box { background: hsl(var(--card)); border: 1px solid hsl(var(--border)); border-radius: 12px; padding: 24px; width: 320px; max-width: 90vw; }
+        .confirm-title { font-size: 16px; font-weight: 600; margin-bottom: 8px; color: hsl(var(--fg)); }
+        .confirm-msg { font-size: 14px; color: hsl(var(--muted-fg)); margin-bottom: 20px; }
+        .confirm-actions { display: flex; gap: 12px; justify-content: flex-end; }
+        .confirm-cancel { padding: 6px 20px; border-radius: 8px; border: 1px solid hsl(var(--border)); background: transparent; color: hsl(var(--fg)); font-size: 14px; cursor: pointer; }
+        .confirm-cancel:hover { background: hsl(var(--muted)); }
+        .confirm-ok { padding: 6px 20px; border-radius: 8px; border: none; background: hsl(var(--destructive)); color: #fff; font-size: 14px; cursor: pointer; }
+        .confirm-ok:hover { opacity: 0.9; }
+    </style>
+</head>
+<body>
+    <!-- Navbar -->
+    <nav class="navbar">
+        <div class="navbar-container">
+            <a href="index-converted.html" class="logo">
+                <svg class="logo-icon" viewBox="0 0 1024 1024" version="1.1" xmlns="http://www.w3.org/2000/svg">
+                    <defs>
+                        <linearGradient id="logo-gradient" x1="0%" y1="0%" x2="100%" y2="100%">
+                            <stop offset="0%" style="stop-color:hsl(190, 100%, 55%)" />
+                            <stop offset="100%" style="stop-color:#8b5cf6" />
+                        </linearGradient>
+                    </defs>
+                    <path d="M447.21664 393.38496l0.9472-0.768a108.416 108.416 0 0 1 10.89536-7.6032l2.69824 1.35168-1.35168 2.69824c-2.69824 0.90112-4.50048 2.2528-5.4016 4.05504-1.80224 4.5056-4.5056 7.6544-8.10496 9.45664l-1.35168 2.70336c-5.4016 5.4016-10.8032 9.00608-16.20992 10.8032l-4.05504 5.40672-2.69824 10.8032-5.40672 1.3568c-27.91936 18.91328-56.28928 49.98144-85.10464 93.2096v-5.4016A20.03968 20.03968 0 0 1 337.47456 512c7.20384-31.52384 24.76544-57.64096 52.6848-78.35136-11.70944 6.2976-27.91936 23.41376-48.63488 51.33312v-18.91328C418.97984 388.61312 461.312 349.89056 468.51584 349.89056a25.4976 25.4976 0 0 1 8.10496 1.35168L406.3744 417.4336l14.85824-2.69824c0-2.70336 0.90112-5.85728 2.69824-9.45664 2.70336-0.90112 5.85728-1.35168 9.45664-1.35168l1.35168-2.70336v2.70336h1.35168l1.35168 1.35168V399.872l2.70336-4.04992h2.69824l1.35168-5.40672c0.90112-1.80224 2.2528-3.1488 4.05504-4.04992v4.04992c-0.1536 0.60416-0.31232 1.152-0.4864 1.65376l-0.54784 1.31584zM329.3696 563.33312v-6.75328l1.28-1.59232-1.28-6.51264c0-4.32128 0.86528-8.64768 2.59072-12.96896l1.4592-3.24096-1.34656-4.05504c27.91424-27.91936 46.37696-43.67872 55.38304-47.2832l4.05504-14.85824 2.70336 2.70336 27.01824-24.32v-5.4016c13.50656-14.40768 21.61152-22.74304 24.32-24.99072 2.69824-2.2528 5.4016-3.82976 8.09984-4.73088h1.35168l9.45664-5.4016 4.05504-2.70336 2.69824-2.70336c0.90112 0 1.80224 0.90112 2.70336 2.70336-23.41376 16.20992-35.57376 27.4688-36.47488 33.77152-10.8032 13.51168-16.20992 23.41888-16.20992 29.7216L329.3696 563.33312z m14.85824-112.128c6.30784-16.20992 15.75936-27.91424 28.36992-35.1232l-28.3648 35.1232z m-110.77632 341.7856c-1.79712-10.8032-2.69824-20.26496-2.69824-28.3648 0-50.43712 4.5056-83.7632 13.50656-99.97312l-0.896 1.71008-0.03072 0.4864a5516.288 5516.288 0 0 1-5.1712 50.96448l-0.65536 6.28224c-2.70336 27.91936-4.05504 50.88256-4.05504 68.89472z m10.79808 34.43712l0.06656-6.56896c0.47616-31.95904 4.06016-70.51776 10.752-115.67616-7.20384 21.61664-10.8032 34.67264-10.8032 39.17824l-0.01536 83.06688z m-32.39424 74.91072c0.2048-94.8224 2.4576-145.2288 6.73792-151.22432l-6.6816 150.21056-0.0768 1.4336 0.02048-0.41984z m46.3872 46.7712c-3.97824 28.1344-6.38464 47.24224-7.22944 57.32864 3.00544-15.5136 5.59104-35.53792 7.7568-60.0832l0.17408-2.17088-0.70144 4.92544z m5.8368-88.63744l-0.44544 8.9088-0.4608 9.3952c-1.0496 22.24128-2.304 42.2656-3.7632 60.07808l-0.4608 5.25312 0.16896-1.16224c3.60448-27.01824 5.40672-48.1792 5.40672-63.49312l-0.32768-14.82752-0.12288-4.1472z m-3.74784-175.62624l-1.15712 8.9344c-6.33856 51.73248-9.50784 104.61696-9.50784 158.65344l-0.02048-0.16384 0.512-9.3184c3.584-68.77184 6.9632-121.33376 10.14784-157.68576l0.0256-0.41984z m425.22112 191.26784l-2.29376-3.1744c-8.704-12.032-13.6448-20.66432-14.80704-25.9072l2.69824-6.7584 1.3824 3.44576 0.1536 0.42496 2.51904-2.51904h2.70336c0.90112 3.60448 4.95104 8.10496 12.15488 13.50656l-12.15488-16.20992 1.35168 1.35168 1.34656 1.35168v-1.35168l25.67168 25.66656-5.40672-8.10496 20.26496 21.61664c-11.70944-20.71552-28.3648-44.1344-49.98656-70.2464 46.83264 48.62976 83.30752 89.61024 109.42464 122.9312-39.6288-52.23424-67.54304-92.76416-83.75296-121.58464l25.00608 33.78176-0.90112-1.27488c-5.57568-7.76704-9.6256-14.52032-12.16-20.25984l-1.14176-2.7904v-8.10496l13.51168 16.20992-12.16-17.5616 78.35648 91.86304 4.04992-2.69824 3.04128 3.03616 3.71712 3.71712 5.4016 4.04992c-19.8144-19.8144-39.6288-45.48096-59.4432-77.0048a7078.84032 7078.84032 0 0 1-51.33312-85.10464c-94.5664-144.9984-146.35008-223.80032-155.35616-236.41088-17.11104-23.41376-37.82656-34.67264-62.14144-33.77152h-4.05504l-2.69824 1.35168c-0.90112 3.59936-1.35168 5.85216-1.35168 6.75328v4.72576c0 2.2528 0.45056 3.3792 1.35168 3.3792l-20.26496 8.10496 4.04992 17.5616-4.04992 1.35168-5.40672-1.35168c-4.5056 2.70336-6.97856 4.5056-7.424 5.40672-0.45568 0.896-0.68096 2.69824-0.68096 5.4016l-12.15488-2.70336 2.69824 6.7584-4.04992 5.4016v6.7584h-5.40672v2.69824c1.80224 3.59936 1.80224 5.4016 0 5.4016v6.7584l-6.75328 5.4016c0 18.01216 3.60448 33.77152 10.8032 47.2832 23.41888 36.02432 42.33216 62.592 56.74496 79.70304 45.0304 63.04256 114.3808 147.2512 208.04096 252.6208 16.20992 8.11008 28.3648 14.86336 36.47488 20.26496l4.05504-4.04992c11.70432 12.60544 18.01216 18.91328 18.90816 18.91328l1.35168-2.70336v-2.70336c-50.432-53.13536-75.648-84.20864-75.648-93.21472l1.34656-1.34656h1.35168c34.2272 34.22208 59.4432 59.88864 75.65312 77.0048-28.82048-32.42496-52.6848-63.9488-71.59808-94.5664l8.99584 11.52zM286.1568 933.30944l0.84992-5.27872c2.0224-12.35968 3.98336-23.15264 5.888-32.36864-4.50048 5.4016-6.74816 18.46272-6.74816 39.17824l0.01024-1.53088z m-0.26624 1.71008l-3.79904 2.51904c-0.59904 4.20352-0.9984 8.00768-1.2032 11.41248l-0.1536 3.26656 0.00512-2.51904c0-14.1312 1.152-34.4064 3.456-60.81536l0.59904-6.72768c2.69824-29.7216 4.04992-52.23936 4.04992-67.54816l4.05504-4.05504 2.70336 8.10496c-3.60448 8.11008-3.60448 21.61664 0 40.52992 4.50048-62.14144 9.45152-107.17184 14.85824-135.0912 2.70336-30.6176 4.04992-54.03648 4.04992-70.2464 4.5056-29.7216 8.11008-52.23936 10.80832-67.54816 10.80832-17.11104 46.60736-52.23424 107.40224-105.3696 60.78976-53.14048 98.8416-82.86208 114.1504-89.1648 87.35744-75.65312 169.76384-144.54784 247.2192-206.6944 15.3088-17.10592 26.11712-30.16704 32.41984-39.17312-9.00608-18.91328-14.40768-33.77152-16.20992-44.57984-7.20384-14.4128-12.60544-24.76544-16.20992-31.07328l-1.35168 1.35168-5.4016-1.35168h-1.35168c0-0.90112 1.80224-3.1488 5.4016-6.75328l-10.8032 5.4016v-10.8032h-6.7584l-4.04992-8.10496c-2.70336 0-4.95616-0.45056-6.7584-1.35168l-1.34656-1.35168 5.4016-2.70336-9.45664 4.05504-8.10496-4.05504c-42.33216 9.0112-87.36256 36.92544-135.0912 83.75808a7078.144 7078.144 0 0 0-112.128 120.23296C425.728 326.02112 376.20224 381.40928 353.68448 414.73536a90.95168 90.95168 0 0 1-1.35168-14.86336c0-2.69824 4.95616-38.05184 14.86336-106.04544s15.3088-103.3472 16.20992-106.05056c17.11104-52.23424 25.66656-90.0608 25.66656-113.47456C409.07264 24.76544 400.96768 0 384.75264 0h-4.0448c-1.80736 1.80224-2.70848 3.60448-2.70848 5.4016l-2.69824 1.35168-2.70336-4.04992L371.2512 0c-4.5056 4.5056-8.10496 7.6544-10.8032 9.45664l-10.80832-4.05504-8.11008 1.35168-9.45152-4.04992C309.5552 9.00608 291.9936 22.0672 279.38816 41.87648c-12.61056 37.82656-19.36896 66.2016-20.27008 85.10976-11.70432 44.1344-23.8592 119.7824-36.47488 226.95424-10.8032 96.36864-17.5616 176.07168-20.25984 239.11424-1.69472 33.90464-2.59584 102.51264-2.69312 205.824L199.68 887.56224c0.90112 31.51872 1.35168 54.9376 1.35168 70.2464l6.7584-81.0496c0.896 3.59936 1.34656 7.64928 1.34656 12.15488 0 10.8032-1.1264 26.56768-3.3792 47.2832-2.2528 20.7104-3.3792 36.47488-3.3792 47.27808 3.6864-22.84032 6.46656-41.76384 8.3456-56.77056l0.0768-0.6656-0.09216 2.27328-3.99872 89.55904-0.27648 6.13376 24.32-202.63936c0 27.01824 0.45056 43.22816 1.34656 48.63488 1.80224-96.36864 9.9072-184.6272 24.32-264.7808-0.90112 53.13536-0.90112 85.10464 0 95.91296l-0.01024-0.08192 0.06144-2.24256c0.10752-2.4832 0.37888-5.4528 0.81408-8.9088l0.4864-3.62496v-31.07328l1.34656-2.69824 4.2496 2.1248 0.3328-2.5856 0.4096-3.24608 0.4096-3.05152 2.70848-1.34656c0 7.20384 0.45056 17.5616 1.34656 31.06816v28.36992c0 7.20384 0.45056 12.16 1.35168 14.85824-3.59936 37.82656-5.85216 71.15264-6.75328 99.968l0.9216 41.48736-0.02048 0.32768 0.03072-0.21504c2.42176-44.9536 5.46304-79.73376 9.13408-104.35584l0.7424-4.7872v51.33312l2.70336-75.648c0.896-29.7216 4.5056-54.0416 10.8032-72.95488v16.21504l1.35168 10.8032c-6.30272 16.21504-9.45664 42.78272-9.45664 79.70816 0 15.3088 0.45056 25.216 1.35168 29.7216a98.2016 98.2016 0 0 0-4.04992 28.3648v36.47488l2.69824 4.05504v24.32l-9.45664 104.01792 5.40672-39.17824 1.35168 8.10496c0 3.60448-0.45056 9.68192-1.35168 18.23744-0.90112 8.55552-1.35168 15.08864-1.35168 19.58912l-0.01024-0.02048 5.41184-26.99776-4.02944 44.26752 1.08544-8.61184c1.46944-11.72992 2.9184-22.76352 4.33664-33.09568l0.86016-6.15424 0.45056 0.896-0.38912-1.37216 0.14336-0.99328c1.05472-7.48544 2.0992-14.58176 3.1232-21.28384l0.9216-5.888z" fill="url(#logo-gradient)" p-id="5410"></path>
+                </svg>
+                <span class="logo-text">ktoonAi</span>
+            </a>
+            <div class="nav-right">
+                <a href="index-converted.html" class="btn-back">返回首页</a>
+                <div class="nav-button">
+                    <button class="btn-primary">登录</button>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Profile Header -->
+    <div class="profile-header">
+        <div id="profileAvatarWrap"></div>
+        <div class="profile-info">
+            <div class="profile-name" id="profileName">未登录</div>
+            <div class="profile-stats">
+                <div><span id="statPublished">0</span> 已发布</div>
+                <div><span id="statDrafts">0</span> 草稿</div>
+                <div><span id="statLikes">0</span> 获赞</div>
+                <div><span id="statFans">0</span> 粉丝</div>
+            </div>
+        </div>
+        <div class="settings-wrap">
+            <button class="settings-btn" id="settingsBtn">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/>
+                </svg>
+            </button>
+            <div class="settings-dropdown" id="settingsDropdown">
+                <button class="settings-item" id="editProfileBtn">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+                    编辑个人资料
+                </button>
+                <button class="settings-item danger" id="logoutBtn">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+                    退出登录
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Tabs -->
+    <div class="profile-tabs">
+        <div class="profile-tab active" data-tab="published">已发布 <span class="count" id="publishedCount">0</span></div>
+        <div class="profile-tab" data-tab="drafts">草稿 <span class="count" id="draftsCount">0</span></div>
+    </div>
+
+    <!-- Gallery -->
+    <div class="gallery" id="profileGallery"></div>
+    <div class="empty-state" id="emptyState" style="display:none;">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
+        <div id="emptyText">暂无作品</div>
+    </div>
+
+    <!-- Work Detail Modal -->
+    <div class="modal" id="workModal">
+        <div class="modal-content">
+            <button class="modal-close" id="modalClose">&times;</button>
+            <div class="modal-image-wrap">
+                <img class="modal-image" id="modalImage" src="" alt="">
+            </div>
+            <div class="modal-info">
+                <!-- 作者栏 -->
+                <div class="modal-author-bar">
+                    <img class="modal-author-avatar" id="modalAvatar" src="" alt="">
+                    <span class="modal-author-name" id="modalUsername"></span>
+                    <button class="follow-btn" id="modalFollowBtn" style="display:none;">关注</button>
+                </div>
+                <!-- 标题 -->
+                <div class="modal-title-bar">
+                    <h2 class="modal-title" id="modalTitle"></h2>
+                </div>
+                <!-- 可滚动中间区域 -->
+                <div class="modal-middle">
+                    <!-- 提示词 -->
+                    <div class="modal-prompt-section">
+                        <div class="modal-prompt-label">
+                            <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>
+                            提示词
+                        </div>
+                        <div class="modal-prompt-text" id="modalPrompt"></div>
+                    </div>
+                    <!-- 评论区 -->
+                    <div class="modal-comment-section">
+                        <div class="modal-comment-header">
+                            <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+                            评论 <span id="commentCount">0</span>
+                        </div>
+                        <div class="modal-comment-list" id="commentList"></div>
+                        <div class="modal-comment-input-wrap" id="commentInputWrap" style="display:none;">
+                            <img class="modal-comment-input-avatar" id="commentAvatar" src="" alt="">
+                            <input type="text" class="modal-comment-input" id="commentInput" placeholder="写下你的评论..." maxlength="500">
+                            <button class="modal-comment-send" id="commentSendBtn">发送</button>
+                        </div>
+                        <div class="modal-comment-login-hint" id="commentLoginHint" style="display:none;">
+                            请先<a href="index-converted.html">登录</a>后发表评论
+                        </div>
+                    </div>
+                </div>
+                <!-- 操作栏 -->
+                <div class="modal-action-bar">
+                    <button class="modal-action-btn" id="likeBtn">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>
+                        <span id="likeCount">0</span>
+                    </button>
+                    <button class="modal-action-btn" id="copyPromptBtn">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+                        复制提示词
+                    </button>
+                    <button class="modal-action-btn" id="downloadBtn">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                        下载
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 取消关注确认弹窗 -->
+    <div class="confirm-overlay" id="unfollowConfirm" style="display:none;">
+        <div class="confirm-box">
+            <div class="confirm-title">取消关注</div>
+            <div class="confirm-msg">你确定不再关注此作者吗？</div>
+            <div class="confirm-actions">
+                <button class="confirm-cancel" id="unfollowCancel">取消</button>
+                <button class="confirm-ok" id="unfollowOk">确定</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 编辑资料弹窗 -->
+    <div class="profile-modal" id="profileModal">
+        <div class="profile-modal-box">
+            <button class="profile-modal-close" id="profileModalClose">&times;</button>
+            <div class="profile-modal-title">编辑个人资料</div>
+            <div class="profile-modal-subtitle">修改头像和个人信息</div>
+            <div class="profile-avatar-section">
+                <div class="profile-edit-avatar-wrapper" id="profileAvatarWrapper">
+                    <div class="profile-edit-avatar-placeholder" id="profileAvatarPlaceholder">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                            <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
+                            <circle cx="12" cy="7" r="4"/>
+                        </svg>
+                    </div>
+                </div>
+                <input type="file" id="profileAvatarInput" accept="image/*" style="position:absolute;opacity:0;width:0;height:0;overflow:hidden;">
+                <div class="profile-avatar-hint">点击更换头像</div>
+            </div>
+            <div class="profile-field">
+                <label>用户名</label>
+                <input type="text" id="profileUsername" placeholder="请输入用户名">
+            </div>
+            <div class="profile-field">
+                <label>邮箱</label>
+                <input type="email" id="profileEmail" placeholder="请输入邮箱">
+            </div>
+            <div class="profile-field">
+                <label>手机号</label>
+                <input type="tel" id="profilePhone" placeholder="请输入手机号（选填）">
+            </div>
+            <button class="profile-submit" id="profileSubmit">保存资料</button>
+            <button class="profile-skip" id="profileSkip">取消</button>
+        </div>
+    </div>
+
+    <!-- 登录弹窗 -->
+    <div class="login-modal" id="loginModal">
+        <div class="login-modal-box">
+            <button class="login-modal-close" id="loginModalClose">&times;</button>
+            <div class="login-modal-logo">
+                <svg width="28" height="28" viewBox="0 0 1024 1024" version="1.1" xmlns="http://www.w3.org/2000/svg">
+                    <defs><linearGradient id="login-logo-gradient" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" style="stop-color:hsl(190, 100%, 55%)" /><stop offset="100%" style="stop-color:#8b5cf6" /></linearGradient></defs>
+                    <path d="M447.21664 393.38496l0.9472-0.768a108.416 108.416 0 0 1 10.89536-7.6032l2.69824 1.35168-1.35168 2.69824c-2.69824 0.90112-4.50048 2.2528-5.4016 4.05504-1.80224 4.5056-4.5056 7.6544-8.10496 9.45664l-1.35168 2.70336c-5.4016 5.4016-10.8032 9.00608-16.20992 10.8032l-4.05504 5.40672-2.69824 10.8032-5.40672 1.3568c-27.91936 18.91328-56.28928 49.98144-85.10464 93.2096v-5.4016A20.03968 20.03968 0 0 1 337.47456 512c7.20384-31.52384 24.76544-57.64096 52.6848-78.35136-11.70944 6.2976-27.91936 23.41376-48.63488 51.33312v-18.91328C418.97984 388.61312 461.312 349.89056 468.51584 349.89056a25.4976 25.4976 0 0 1 8.10496 1.35168L406.3744 417.4336l14.85824-2.69824c0-2.70336 0.90112-5.85728 2.69824-9.45664 2.70336-0.90112 5.85728-1.35168 9.45664-1.35168l1.35168-2.70336v2.70336h1.35168l1.35168 1.35168V399.872l2.70336-4.04992h2.69824l1.35168-5.40672c0.90112-1.80224 2.2528-3.1488 4.05504-4.04992v4.04992c-0.1536 0.60416-0.31232 1.152-0.4864 1.65376l-0.54784 1.31584z" fill="url(#login-logo-gradient)"></path>
+                </svg>
+                <span class="login-modal-logo-text">Ktoonai</span>
+            </div>
+            <div class="login-modal-title">欢迎登录Ktoonai</div>
+            <div class="login-modal-field">
+                <input type="text" id="loginUsername" placeholder="请输入用户名" autocomplete="username">
+            </div>
+            <div class="login-modal-field login-modal-password">
+                <input type="password" id="loginPassword" placeholder="请输入密码" autocomplete="current-password">
+                <button class="login-modal-eye" id="loginEyeToggle" type="button">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+                </button>
+            </div>
+            <button class="login-modal-submit" id="loginSubmit">登录</button>
+            <div class="login-modal-footer">
+                <a href="forgot-password.html">忘记密码?</a>
+                <a href="register.html">没有账号?</a>
+            </div>
+        </div>
+    </div>
+
+    <script>
+
+
+    
+
+    
+    // Seed pre-populated works for main user
+    (function() {
+        var published = JSON.parse(localStorage.getItem('ktoon_published_works') || '[]');
+        var seedWorks = [
+  {
+    "image": "../ai-image-tool/yangpian/1.png",
+    "prompt": "主体内容：抽象的颜料纹理，带有细腻的闪光颗粒； 场景设定：仿佛是蓝色颜料在画布上被涂抹，营造出梦幻的艺术创作场景，有点像起伏的浪花； 风格参考：梦幻治愈的油画质感，融合唯美光斑的摄影风格； 色彩色调：以蓝色、青色、金色为主的清新柔和色调，点缀闪烁的金色高光； 构图视角：采用特写视角，聚焦颜料的纹理与闪光细节，呈现出充满动感的流动式构图； 附加细节：大量的光斑（bokeh效果），细腻的颜料笔触纹理，整体画面呈现出朦胧且治愈的氛围，带有小红书风格的清新梦幻感。 一只中世纪的战船冲中驶过 梦幻感与电影风碰撞的美感，画面下方有极细无衬线小字体副标题“2026”且无衬线体小字居中，合适的地方有极细无衬线字体签名“Poipoi”，带细闪珠光感，光影戏剧化。超越时代，极繁风格，非常规构图大张力角度，富有故事感。",
+    "title": "抽象油画",
+    "username": "情绪过度老师",
+    "avatar": "../ai-image-tool/yangpian/主用户/主用户头像.png",
+    "timestamp": 1713086400000,
+    "id": 1713000000001
+  },
+  {
+    "image": "../ai-image-tool/yangpian/2.png",
+    "prompt": "一架小小的红色的单翼螺旋桨飞机穿行在布满积云的天空，浅白灰色调的云朵被夕阳镀上金色的边，天空从上方的深蓝色向下方的橙色渐变。在庞大的云朵间，飞机显得十分渺小。Moebius (Jean Giraud)风格，极繁主义，极致表现力，浪漫感，细节完美，大师杰作。",
+    "title": "云端飞行",
+    "username": "情绪过度老师",
+    "avatar": "../ai-image-tool/yangpian/主用户/主用户头像.png",
+    "timestamp": 1713172800000,
+    "id": 1713000000002
+  },
+  {
+    "image": "../ai-image-tool/yangpian/3.png",
+    "prompt": "一幅呈现万剑以凌厉之势组成剑阵旋转的动态图，每一剑都闪烁着寒光，剑影层层叠叠仿若在进行一场惊心动魄的万剑决，画面中剑气纵横，光影闪烁，营造出紧张刺激的氛围，大师级构图，大气磅礴，冷色系，折射光影，光影弥散，抽象表达，艺术氛围，情绪表达和叙事，艺术插画，超现实主义美学，高级的氛围感，层次感，动态模糊强化携带速度线残影，全局朦胧模糊效果，淡彩调暗光环境，多重曝光与失焦叠加，光影特效，超广角强透视构图，动态模糊边缘虚化，强烈胶片颗粒与高噪点质感，弥散晕染的暗部层次，超现实景深控制，细节生动完美，8K级暗调摄影。有万剑归宗的感觉",
+    "title": "万剑归宗",
+    "username": "情绪过度老师",
+    "avatar": "../ai-image-tool/yangpian/主用户/主用户头像.png",
+    "timestamp": 1713259200000,
+    "id": 1713000000003
+  },
+  {
+    "image": "../ai-image-tool/yangpian/4.png",
+    "prompt": "国风雕塑，石头雕刻。繁复华丽的线条，细腻的笔触。极繁主义。黑白色调，色调柔和自然，色彩过度丝滑。暗黑风格。仰视角 机甲线稿画，全身像。0.5mm粗线勾勒轮廓。 梦幻感与电影风碰撞的美感，带细闪珠光感，光影戏剧化。超越时代，极繁风格，富有故事感。",
+    "title": "国风雕塑",
+    "username": "情绪过度老师",
+    "avatar": "../ai-image-tool/yangpian/主用户/主用户头像.png",
+    "timestamp": 1713345600000,
+    "id": 1713000000004
+  },
+  {
+    "image": "../ai-image-tool/yangpian/5.png",
+    "prompt": "一只拟人化的小羊，以日常快照的视觉风格展现，照片中没有明确的主体或构图感，还带有轻微的运动模糊。主角占据画面中心位置，是自拍的大头照，脸上带着厌世的神情，它脖子上挂着一个带有自己大头照的工牌。背景是办公场景，旁边的电脑屏幕上是平面设计的页面，营造出一种平凡又独特的氛围。",
+    "title": "厌世小羊",
+    "username": "情绪过度老师",
+    "avatar": "../ai-image-tool/yangpian/主用户/主用户头像.png",
+    "timestamp": 1713432000000,
+    "id": 1713000000005
+  },
+  {
+    "image": "../ai-image-tool/yangpian/6.png",
+    "prompt": "万花筒，水彩插画，白描手法，水彩晕染，水色晕染，水彩效果，水彩质感，猫，走在瓦片屋檐上，有好多密集垂下来的柳树枝叶，枝叶上有许多花朵，飞鸟，中景，水彩插画，白描手法，水彩晕染，水色晕染，飞鸟，故事感，艺术气息，极致烂漫，艺术气息，模糊 水彩画，绿色系，光影斑斓，朦胧，温柔透明，阳光普照，梵高配色，大师构图，主次分明，",
+    "title": "水彩猫咪",
+    "username": "情绪过度老师",
+    "avatar": "../ai-image-tool/yangpian/主用户/主用户头像.png",
+    "timestamp": 1713518400000,
+    "id": 1713000000006
+  },
+  {
+    "image": "../ai-image-tool/yangpian/7.png",
+    "prompt": "大师级排版，极繁主义，半调图案，杂色，丝网印刷质感。点线面层次分布，以黄绿搭配夸张多彩小番茄元素，呈现热烈感",
+    "title": "半调番茄",
+    "username": "情绪过度老师",
+    "avatar": "../ai-image-tool/yangpian/主用户/主用户头像.png",
+    "timestamp": 1713604800000,
+    "id": 1713000000007
+  },
+  {
+    "image": "../ai-image-tool/yangpian/8.png",
+    "prompt": "绒毛材质，超现实未来主义，干净，简洁，极简，可爱，萌，艺术性，光线追踪，朦胧感，内容简洁，想象力爆表的获奖作品，光影加重，扁平化，胖嘟嘟的鸡脸部侧脸特写，闭眼，仰头，8K超清画质",
+    "title": "绒毛小鸡",
+    "username": "情绪过度老师",
+    "avatar": "../ai-image-tool/yangpian/主用户/主用户头像.png",
+    "timestamp": 1713691200000,
+    "id": 1713000000008
+  },
+  {
+    "image": "../ai-image-tool/yangpian/9.png",
+    "prompt": "一份牛肉面的分解图，以垂直展开视图呈现。采用超详细的商业食品摄影风格。 顶部显示漂浮的红辣椒油在空中飞溅，油滴和辣椒片在运动中被定格，鲜红色，光泽质感，戏剧性的灯光效果。 下面，香菜叶和新鲜大蒜芽悬浮着，鲜绿色，脆嫩，充满生机。 下一层是红烧牛肉片，质地嫩滑，表面多汁，呈丰富的棕色，略有光泽，悬浮在空中。 再下面是手工拉制的面条，以动态的飞行动作卷曲，表面光滑，呈现出真实的小麦质感。 面条下面是一碗透明的牛肉清汤，汤色金黄，里面有小块牛肉和香草，蒸汽缓缓上升。 所有食材以优雅的垂直堆叠方式悬浮，每层分开。 最底部显示完成的牛肉面碗，浓郁的汤底，面条浸没其中，上面有辣椒油、牛肉片、香菜和大蒜芽。 黑色背景，边缘照明，产品海报风格，高清晰度，高对比度，戏剧性的工作室灯光。 标签和数字整齐地排列在每层旁边，用中文和英文标注。 整体美学：高端食品广告，干净，光泽，高端，3D般的真实感。",
+    "title": "牛肉面分解",
+    "username": "情绪过度老师",
+    "avatar": "../ai-image-tool/yangpian/主用户/主用户头像.png",
+    "timestamp": 1713777600000,
+    "id": 1713000000009
+  },
+  {
+    "image": "../ai-image-tool/yangpian/10.png",
+    "prompt": "画面的主角是一只手绘的Q版三花猫，这只三花猫是仙兽，造型可爱绝美。其自身散发着金色的光芒，琥珀色的大眼睛中星星闪耀，极具吸引力。 图片风格为CG 厚涂,CG 厚涂，游戏CG ，丰富的色彩层次，质感细腻，真实光影，精致的细节，以国风动漫的柔软流畅且超高细节的视觉风格进行呈现。",
+    "title": "仙兽三花猫",
+    "username": "情绪过度老师",
+    "avatar": "../ai-image-tool/yangpian/主用户/主用户头像.png",
+    "timestamp": 1713864000000,
+    "id": 1713000000010
+  },
+  {
+    "image": "../ai-image-tool/yangpian/11.png",
+    "prompt": "没有一丝杂质的纯白背景上以怪异和无法理解的状态存在着一间很大的任意粗细任意颜色任意弧度的线条世界，世界里充斥着各种由诸如斐波那契数列等绝美数学规律汇聚的线条构成的诡异生物体",
+    "title": "线条世界",
+    "username": "情绪过度老师",
+    "avatar": "../ai-image-tool/yangpian/主用户/主用户头像.png",
+    "timestamp": 1713950400000,
+    "id": 1713000000011
+  },
+  {
+    "image": "../ai-image-tool/yangpian/12.png",
+    "prompt": "Adam Riches风格作品，肖像的精密线条，以单线连续线条绘画，让木炭在纸上游走成即兴的排线，他的线条时而密集，时而疏朗，构筑立体感，层层叠叠，这些看似无序的线条轨迹，最终重构出古典巴洛克风格与极繁主义叙事。拟人国风浮雕，神秘感，华丽炫酷的花纹和质感、冷色调，整个画面散发出一种美轮美奂的诡异气质，惊艳迷人却又令人感觉到危险和恐惧，极致的细节刻画，极致的立体纹理，奢华、繁琐、恢弘、大气，超高清画质。风神",
+    "title": "风神浮雕",
+    "username": "情绪过度老师",
+    "avatar": "../ai-image-tool/yangpian/主用户/主用户头像.png",
+    "timestamp": 1714036800000,
+    "id": 1713000000012
+  },
+  {
+    "image": "../ai-image-tool/yangpian/13.png",
+    "prompt": "采用微缩景观风格，以真实拍摄手法，借助微观镜头呈现出3D效果的微观创意摄影画面。一群造型小巧可爱的小人在制作面包，其中有着完整的制作面包工序，从和面粉、揉面团、发酵、面团塑形、烤制成型，小人们分工明确，神情专注，周围摆放着各种缩小的制作工具，整个场景细节满满，色调自然，营造出一种逼真且富有生活气息的微观世界。",
+    "title": "微缩面包",
+    "username": "情绪过度老师",
+    "avatar": "../ai-image-tool/yangpian/主用户/主用户头像.png",
+    "timestamp": 1714123200000,
+    "id": 1713000000013
+  },
+  {
+    "image": "../ai-image-tool/yangpian/14.png",
+    "prompt": "一张涂鸦作品，密密麻麻，错落有致，不同类型卡通人物涂鸦，可爱，惹人喜欢，色彩鲜明和谐，用Mr Doodle风格，画面全部布满，没有留白空隙，大师作品，大师艺术风格，大胆前卫，抽象概念。",
+    "title": "涂鸦满屏",
+    "username": "情绪过度老师",
+    "avatar": "../ai-image-tool/yangpian/主用户/主用户头像.png",
+    "timestamp": 1714209600000,
+    "id": 1713000000014
+  },
+  {
+    "image": "../ai-image-tool/yangpian/15.png",
+    "prompt": "壁画质感，超级大场景，岩彩风格，仙界，天圆地方，从天而降，仙马（俊马），灵动的姿态，浴日巡天，光怪陆离，低饱和度藻井，克林姆特风，背景色是斑驳的赭石，深棕色，墨绿色，暗红色，渐变为中国红或深蓝紫色，蓝色，磨砂背景，磨砂颗粒质感，磨砂颗粒画布基底，厚重色块笔触与水粉插画结合，暗黑，古风水彩厚涂，岩彩， 超高清水彩插画，盛世繁华的叙事氛围，历史感，暗刻墨金色纹饰，画面精细。",
+    "title": "壁画仙界",
+    "username": "情绪过度老师",
+    "avatar": "../ai-image-tool/yangpian/主用户/主用户头像.png",
+    "timestamp": 1714296000000,
+    "id": 1713000000015
+  },
+  {
+    "image": "../ai-image-tool/yangpian/16.png",
+    "prompt": "具有素描涂鸦质感的搞怪表情包风格头像，主体是一位拥有黄色卷翘发的角色，表情呈现出夸张的翻白眼状态，五官因夸张的表情而扭曲，充满了趣味性。绿色背景，采用居中构图，让主体的表情能够被清晰看到",
+    "title": "翻白眼头像",
+    "username": "情绪过度老师",
+    "avatar": "../ai-image-tool/yangpian/主用户/主用户头像.png",
+    "timestamp": 1714382400000,
+    "id": 1713000000016
+  },
+  {
+    "image": "../ai-image-tool/yangpian/17.png",
+    "prompt": "武政谅风格插画，丝网印刷风格，颗粒肌理，特写平视视角；前景是一个小的画面居中的道路转弯镜，转弯镜里是公路和汽车天空白云的画面，后景是纯蓝色的天空；纯扁平插画，超简约构图，颗粒纹理，平涂，超高清，8K，高饱和度，",
+    "title": "道路转弯镜",
+    "username": "情绪过度老师",
+    "avatar": "../ai-image-tool/yangpian/主用户/主用户头像.png",
+    "timestamp": 1714468800000,
+    "id": 1713000000017
+  },
+  {
+    "image": "../ai-image-tool/yangpian/18.png",
+    "prompt": "潦草草稿，灵魂画手，通过简单的线条传递强烈的情感或识别度，风格看似抽象、粗糙或不像，却能意外捕捉到事物神韵和特点，形散神聚、充满喜感而引发调侃和共鸣，夸张或简化的笔触，将对象画得 神似 却 形不似 ，从而产生幽默效果，强调趣味性和情感表达。抽象派人物",
+    "title": "灵魂涂鸦",
+    "username": "情绪过度老师",
+    "avatar": "../ai-image-tool/yangpian/主用户/主用户头像.png",
+    "timestamp": 1714555200000,
+    "id": 1713000000018
+  },
+  {
+    "image": "../ai-image-tool/yangpian/19.png",
+    "prompt": "3D微景观，艺术家Kim Jung Gi设计风格，复古高饱和色系，极繁主义，神秘感，不对称构图，细节完美，杰作。 果冻透明材质时尚建筑特征 极繁主义，蒸汽朋克，神秘。神奇科幻城市，城市里有着由轨道列车、飞行器、交通工具自己建筑物，人们络绎不绝。非对称构图，超清。 高品质细节，超高清分辨率，最佳品质，笔触清晰，高饱和度，光影对比，电影质感。32k超高清细致修复",
+    "title": "蒸汽朋克城",
+    "username": "情绪过度老师",
+    "avatar": "../ai-image-tool/yangpian/主用户/主用户头像.png",
+    "timestamp": 1714641600000,
+    "id": 1713000000019
+  },
+  {
+    "image": "../ai-image-tool/yangpian/20.png",
+    "prompt": "极简主义，点画艺术，抽象插画，细腻颗粒质感，蓝色背景，透明塑料袋，塑料袋里装着大蒜，小葱，生姜，西红柿，鸡蛋",
+    "title": "点画塑料袋",
+    "username": "情绪过度老师",
+    "avatar": "../ai-image-tool/yangpian/主用户/主用户头像.png",
+    "timestamp": 1714728000000,
+    "id": 1713000000020
+  },
+  {
+    "image": "../ai-image-tool/yangpian/21.png",
+    "prompt": "设计一款流线型战士机甲，未来感，非常细节的机械结构，机甲风格参考图片，整体形体比较夸张且造型非常流畅。极繁主义烤漆质感表面，高亮反光，二次反光，局部有极小白色文字和极小的红色的符号和极小的红色指示灯点缀。造型奇特但极富设计感的大型机甲，机甲左右结构非对称设计，流线型，高级感，逼真的质感，写实风格。 有仿生学结构，超清画质32K景深，真实质感，画面细腻通透，Unreal Engine 5渲染，HDR效果，景深效果，电影级色彩分级，全局光照，环境雾，体积光，超细节纹理，动态模糊，抗锯齿处理。高清晰拍摄。真实风格、“ LkMCreative production”的文字、与画面的右下角字体非常小英文书写体，高清晰拍摄，真实风格，鲜艳夺目抛光发亮。",
+    "title": "流线机甲",
+    "username": "情绪过度老师",
+    "avatar": "../ai-image-tool/yangpian/主用户/主用户头像.png",
+    "timestamp": 1714814400000,
+    "id": 1713000000021
+  },
+  {
+    "image": "../ai-image-tool/yangpian/22.png",
+    "prompt": "公益创意广告海报，超写实风格。画面主体是一根深蓝色章鱼触手，触手上的每一个吸盘都被设计成一个打开的易拉罐拉环，拉环的金属质感与触手的生物肌理自然融合，呈现出一种诡异的共生关系。背景是深邃的海洋，光线昏暗，营造出一种冷静而尖锐的氛围。画面上方有极小极细无衬线字体 。小小的英文字：“Abundant vitality.”“BOILING DESIGN”“2026 MAY12”.",
+    "title": "章鱼触手",
+    "username": "情绪过度老师",
+    "avatar": "../ai-image-tool/yangpian/主用户/主用户头像.png",
+    "timestamp": 1714900800000,
+    "id": 1713000000022
+  },
+  {
+    "image": "../ai-image-tool/yangpian/23.png",
+    "prompt": "广角镜头，身穿锦衣卫服装的绝世高手，在画面近景，写实3D，他单手握一柄长枪，英武霸气，犹如赵子龙再世，背影。暴雨夜晚。锦衣卫高手正在与另一个红衣侠客对峙，红衣侠客手持长剑在画面右方远景，正在面向黑衣侠客走来。肃杀氛围，古风，怼黑衣侠客脚步往上大角度仰视拍摄，两个人现在芒草丛中，动作张力拉满，细节清晰，完美构图，超现实摄影效果，大师级杰作",
+    "title": "锦衣卫对决",
+    "username": "情绪过度老师",
+    "avatar": "../ai-image-tool/yangpian/主用户/主用户头像.png",
+    "timestamp": 1714987200000,
+    "id": 1713000000023
+  },
+  {
+    "image": "../ai-image-tool/yangpian/24.png",
+    "prompt": "以大唐悬雕风格艺术创作，极繁主义杰作，从深渊最底部大仰视角度向上看，展现上千公里长数百米深周围充满强烈神秘感且细节完美的唐代悬雕佛国神宗，呈现出国风黑暗韵味，雄伟宏大的极具压迫感，每一处细节都精雕细琢，尽显独特魅力。护法神众和罗汉们凶恶繁琐的炫酷身形。四大菩萨神情祥和，素雅高贵。光影表现为侧面的微暖色光。画面带有微妙的胶片颗粒感，艺术氛围浓，超现实主义，充满叙事感，极繁主义，神秘感，不对称构图，插画美学，透视感超强。",
+    "title": "佛国悬雕",
+    "username": "情绪过度老师",
+    "avatar": "../ai-image-tool/yangpian/主用户/主用户头像.png",
+    "timestamp": 1715073600000,
+    "id": 1713000000024
+  },
+  {
+    "image": "../ai-image-tool/yangpian/25.png",
+    "prompt": "界天门，旋涡空间，黑洞，宇宙星辰大海，飞船。黑暗面，暗能量散发中。",
+    "title": "界天门",
+    "username": "情绪过度老师",
+    "avatar": "../ai-image-tool/yangpian/主用户/主用户头像.png",
+    "timestamp": 1715160000000,
+    "id": 1713000000025
+  },
+  {
+    "image": "../ai-image-tool/yangpian/26.png",
+    "prompt": "影视光影拍摄，真实写实风，一位俏皮可爱，18岁美人，纯幼态脸，自然浅笑，身穿浅桔黄色与精致的绿色小花卉搭配色旗袍，时尚时装旗袍秀，全身人像远景拍摄，脸部五官立体，长瓜子脸型，超清晰，脸部线条细腻真实，皮肤纹理尽显，睫毛自然根根分明清晰，脸部表情自然，头发丝尽显，散丸子头，耳二边垂碎发，真实生活摄影风格，随性姿势展示，手持真丝绣花水墨油纸花伞，超清晰度，自然的妆容，逆光光线自然柔和，阴影与服饰的光泽细腻，皮肤细腻白嫩，通透自然光亮，肌肤纹理自然尽显，眼神妩媚迷人有神韵看镜头，135mm镜头，1.4光圈， 丁达尔效应，光线明暗对比度尽显，艺术设计，背景江南水乡，小桥古镇，",
+    "title": "旗袍美人",
+    "username": "情绪过度老师",
+    "avatar": "../ai-image-tool/yangpian/主用户/主用户头像.png",
+    "timestamp": 1715246400000,
+    "id": 1713000000026
+  },
+  {
+    "image": "../ai-image-tool/yangpian/27.png",
+    "prompt": "矢量图形, 笔触版画, 强对比反差, 肌理磨砂, 噪点颗粒, 凌乱细线条, 缟白 酸性设计, OC人设, 冷漠 手绘线稿, 铅笔涂抹明暗对比, 弥散渐变, 非传统构图 大面积留白",
+    "title": "矢量线稿",
+    "username": "情绪过度老师",
+    "avatar": "../ai-image-tool/yangpian/主用户/主用户头像.png",
+    "timestamp": 1715332800000,
+    "id": 1713000000027
+  },
+  {
+    "image": "../ai-image-tool/yangpian/28.png",
+    "prompt": "”电影质感的胶片摄影 专业人像摄影 大师构图 大师摄影 大师光影 光影美学 高颜值情侣 蕾丝婚纱 头纱 西装礼服 森林 牵手 奔跑 回眸 微笑 胶片感 近景 真人皮肤质感 细腻画质 最高画质 高级感 摄影杰作 画面最底部极细小文字“LIN xiaolin photography”",
+    "title": "森系婚纱",
+    "username": "情绪过度老师",
+    "avatar": "../ai-image-tool/yangpian/主用户/主用户头像.png",
+    "timestamp": 1715419200000,
+    "id": 1713000000028
+  },
+  {
+    "image": "../ai-image-tool/yangpian/29.png",
+    "prompt": "以高质量插画风绘制随机插画：唯美，具有艺术感，视觉冲击，极具张力，包含人物的部分，宏大开阔",
+    "title": "唯美插画",
+    "username": "情绪过度老师",
+    "avatar": "../ai-image-tool/yangpian/主用户/主用户头像.png",
+    "timestamp": 1715505600000,
+    "id": 1713000000029
+  },
+  {
+    "image": "../ai-image-tool/yangpian/30.png",
+    "prompt": "油画厚涂，刀刮，涂抹，不受控，细节刻画，阴影，揉擦结合技法，白色卡纸背景，抽象形态，颗粒质感，光影渐变效果，粗粝与细腻交织的视觉张力，动态模糊，二次曝光，大幅留白，冷暖对比，质感与肌理，晕染，粗细张弛，徘徊有度，形式多变，写意，复古铜版纸基底，细节敲定，情愫流连，叠加态，非常规不对称构图，丁达尔效应，抽象，标新立异，震撼，意境，情绪化，贫民窟，落日，人群，表情细致刻画，不写文字",
+    "title": "油画厚涂",
+    "username": "情绪过度老师",
+    "avatar": "../ai-image-tool/yangpian/主用户/主用户头像.png",
+    "timestamp": 1715592000000,
+    "id": 1713000000030
+  }
+];
+        seedWorks.forEach(function(w) { w._seed = true; });
+        // Always remove old seed data and re-inject with correct paths
+        published = published.filter(function(w) { return !w._seed; });
+        localStorage.setItem('ktoon_published_works', JSON.stringify(seedWorks.concat(published)));
+    })();
+
+    // 工具函数
+    function formatNum(n) {
+        if (n >= 10000) return (n / 10000).toFixed(1).replace(/\.0$/, '') + 'w';
+        return n.toString();
+    }
+    function getLikesData() {
+        return JSON.parse(localStorage.getItem('ktoon_likes') || '{"userLikes":{},"likeCounts":{}}');
+    }
+    function saveLikesData(data) { localStorage.setItem('ktoon_likes', JSON.stringify(data)); }
+    function getLikeCount(workId) { return getLikesData().likeCounts[String(workId)]; }
+    function isLikedByUser(workId, username) {
+        if (!username) return false;
+        var ul = getLikesData().userLikes[username] || [];
+        return ul.indexOf(String(workId)) !== -1;
+    }
+    function toggleLike(workId, username) {
+        var data = getLikesData();
+        var sId = String(workId);
+        if (!data.userLikes[username]) data.userLikes[username] = [];
+        var idx = data.userLikes[username].indexOf(sId);
+        if (idx === -1) {
+            data.userLikes[username].push(sId);
+            data.likeCounts[sId] = (data.likeCounts[sId] || 0) + 1;
+            saveLikesData(data); return true;
+        } else {
+            data.userLikes[username].splice(idx, 1);
+            data.likeCounts[sId] = Math.max(0, (data.likeCounts[sId] || 1) - 1);
+            saveLikesData(data); return false;
+        }
+    }
+    function getComments(workId) {
+        return (JSON.parse(localStorage.getItem('ktoon_comments') || '{}'))[String(workId)] || [];
+    }
+    function saveComment(workId, comment) {
+        var all = JSON.parse(localStorage.getItem('ktoon_comments') || '{}');
+        var sId = String(workId);
+        if (!all[sId]) all[sId] = [];
+        all[sId].push(comment);
+        localStorage.setItem('ktoon_comments', JSON.stringify(all));
+    }
+    function escapeHtml(str) { var d = document.createElement('div'); d.textContent = str; return d.innerHTML; }
+    function formatTimeAgo(ts) {
+        var diff = Date.now() - ts, mins = Math.floor(diff / 60000);
+        if (mins < 1) return '刚刚';
+        if (mins < 60) return mins + '分钟前';
+        var hours = Math.floor(mins / 60);
+        if (hours < 24) return hours + '小时前';
+        var days = Math.floor(hours / 24);
+        if (days < 30) return days + '天前';
+        return new Date(ts).toLocaleDateString('zh-CN');
+    }
+    function renderComments(workId) {
+        var comments = getComments(workId);
+        var list = document.getElementById('commentList');
+        var countEl = document.getElementById('commentCount');
+        if (!list) return;
+        countEl.textContent = comments.length;
+        list.innerHTML = '';
+        if (comments.length === 0) {
+            list.innerHTML = '<div style="padding:16px 0;text-align:center;font-size:12px;color:hsl(var(--muted-fg));">暂无评论，来抢沙发吧</div>';
+            return;
+        }
+        comments.forEach(function(c) {
+            var item = document.createElement('div');
+            item.className = 'modal-comment-item';
+            item.innerHTML = '<img class="modal-comment-avatar" src="' + (c.avatar || '') + '" alt="">' +
+                '<div class="modal-comment-body">' +
+                '<div class="modal-comment-username">' + escapeHtml(c.username) + '</div>' +
+                '<div class="modal-comment-text">' + escapeHtml(c.text) + '</div>' +
+                '<div class="modal-comment-time">' + formatTimeAgo(c.timestamp) + '</div></div>';
+            list.appendChild(item);
+        });
+        list.scrollTop = list.scrollHeight;
+    }
+    function setupCommentInput(workId) {
+        var loggedIn = localStorage.getItem('ktoon_logged_in');
+        var inputWrap = document.getElementById('commentInputWrap');
+        var loginHint = document.getElementById('commentLoginHint');
+        var avatarEl = document.getElementById('commentAvatar');
+        var inputEl = document.getElementById('commentInput');
+        var sendBtn = document.getElementById('commentSendBtn');
+        if (loggedIn) {
+            inputWrap.style.display = 'flex';
+            loginHint.style.display = 'none';
+            var user;
+            if (loggedIn === '情绪过度老师') {
+                user = { username: '情绪过度老师', avatar: '../ai-image-tool/yangpian/主用户/主用户头像.png' };
+            } else {
+                var users = JSON.parse(localStorage.getItem('ktoon_users') || '[]');
+                for (var i = 0; i < users.length; i++) { if (users[i].username === loggedIn) { user = users[i]; break; } }
+            }
+            avatarEl.src = user ? (user.avatar || '') : '';
+            inputEl.value = '';
+            var newSendBtn = sendBtn.cloneNode(true);
+            sendBtn.parentNode.replaceChild(newSendBtn, sendBtn);
+            newSendBtn.addEventListener('click', function() {
+                var text = inputEl.value.trim();
+                if (!text || !user) return;
+                saveComment(workId, {
+                    id: 'c_' + Date.now() + '_' + Math.random().toString(36).substr(2, 5),
+                    username: user.username, avatar: user.avatar || '', text: text, timestamp: Date.now()
+                });
+                renderComments(workId);
+                inputEl.value = '';
+            });
+            inputEl.onkeydown = function(e) { if (e.key === 'Enter') newSendBtn.click(); };
+        } else {
+            inputWrap.style.display = 'none';
+            loginHint.style.display = 'block';
+        }
+    }
+
+    // 关注功能
+    function getFollows() { return JSON.parse(localStorage.getItem('ktoon_follows') || '{}'); }
+    function saveFollows(data) { localStorage.setItem('ktoon_follows', JSON.stringify(data)); }
+    function isFollowing(targetUsername) {
+        var loggedIn = localStorage.getItem('ktoon_logged_in');
+        if (!loggedIn) return false;
+        var follows = getFollows();
+        return (follows[loggedIn] || []).indexOf(targetUsername) !== -1;
+    }
+    function toggleFollow(targetUsername) {
+        var loggedIn = localStorage.getItem('ktoon_logged_in');
+        if (!loggedIn) return false;
+        var follows = getFollows();
+        if (!follows[loggedIn]) follows[loggedIn] = [];
+        var idx = follows[loggedIn].indexOf(targetUsername);
+        if (idx === -1) { follows[loggedIn].push(targetUsername); saveFollows(follows); return true; }
+        else { follows[loggedIn].splice(idx, 1); saveFollows(follows); return false; }
+    }
+    function updateFollowBtn(authorName) {
+        var btn = document.getElementById('modalFollowBtn');
+        var loggedIn = localStorage.getItem('ktoon_logged_in');
+        if (!loggedIn || !authorName || authorName === loggedIn) { btn.style.display = 'none'; return; }
+        btn.style.display = '';
+        if (isFollowing(authorName)) { btn.textContent = '已关注'; btn.classList.add('followed'); }
+        else { btn.textContent = '关注'; btn.classList.remove('followed'); }
+    }
+    document.getElementById('modalFollowBtn').addEventListener('click', function() {
+        var loggedIn = localStorage.getItem('ktoon_logged_in');
+        if (!loggedIn) { showToast('请先登录', 'error'); return; }
+        var authorName = document.getElementById('modalUsername').textContent;
+        if (!authorName || authorName === loggedIn) return;
+        if (isFollowing(authorName)) {
+            document.getElementById('unfollowConfirm').style.display = 'flex';
+            document.getElementById('unfollowOk').onclick = function() {
+                toggleFollow(authorName); updateFollowBtn(authorName);
+                document.getElementById('unfollowConfirm').style.display = 'none';
+            };
+            document.getElementById('unfollowCancel').onclick = function() {
+                document.getElementById('unfollowConfirm').style.display = 'none';
+            };
+        } else {
+            toggleFollow(authorName);
+            updateFollowBtn(authorName);
+        }
+    });
+
+    // 种子评论
+    function seedComments() {
+        if (localStorage.getItem('ktoon_comments_seeded')) return;
+        var commentTexts = [
+            '太美了！这个配色绝了', '请问这是用什么工具生成的？', '好有创意，学习了',
+            '这个光影效果真的很棒', '画面好有故事感', '构图太厉害了', '颜色搭配得很好看',
+            '这个风格我好喜欢', '细节处理得很到位', '氛围感拉满', '大师级作品！',
+            '这个视角很独特', '画质好清晰啊', '满满的高级感', '好有意境',
+            '这也太绝了吧', '被惊艳到了', '疯狂点赞', '收了收了', '创意满分',
+            '这个色调好舒服', '细节控狂喜', '氛围感绝了', '可以当壁纸了',
+            '学到了学到了', '太有才了', '这个效果是怎么做到的', '完美的作品',
+            '真的太好看了', '忍不保存了', '光影处理得很好', '超级喜欢这种风格',
+            '好治愈的画面', '看着心情都好了', '想象力太丰富了', '色彩好丰富',
+            '这个角度选得好', '质感拉满', '好精致', '大神级别的作品',
+            '满满的细节', '好有感觉', '想学这个风格', '太震撼了',
+            '很有视觉冲击力', '好梦幻', '技术太强了', '超出预期',
+            '这个效果真厉害', '画面很有张力', '好有艺术感', '太惊艳了'
+        ];
+        var seedUsernames = ['画梦者', '潮流先锋', '猫咪画家', '国风大师', '水墨丹青', '治愈系画师', '设计师小王', '意境大师'];
+        var seedAvatars = ['../ai-image-tool/yangpian/head/user1.png', '../ai-image-tool/yangpian/head/user2.png', '../ai-image-tool/yangpian/head/user3.png', '../ai-image-tool/yangpian/head/user4.png', '../ai-image-tool/yangpian/head/user5.png', '../ai-image-tool/yangpian/head/user6.png', '../ai-image-tool/yangpian/head/user7.png', '../ai-image-tool/yangpian/head/user8.png'];
+        function seededRandom(seed) { var x = Math.sin(seed * 9301 + 49297) * 49297; return x - Math.floor(x); }
+        var allComments = {};
+        var baseTime = Date.now() - 30 * 86400000;
+        for (var wn = 1; wn <= 70; wn++) {
+            var numComments = Math.floor(seededRandom(wn * 7) * 5) + 1;
+            var comments = [];
+            for (var c = 0; c < numComments; c++) {
+                var seed = wn * 100 + c;
+                comments.push({
+                    id: 'seed_' + wn + '_' + c,
+                    username: seedUsernames[Math.floor(seededRandom(seed * 3) * seedUsernames.length)],
+                    avatar: seedAvatars[Math.floor(seededRandom(seed * 3) * seedAvatars.length)],
+                    text: commentTexts[Math.floor(seededRandom(seed * 5) * commentTexts.length)],
+                    timestamp: baseTime + Math.floor(seededRandom(seed * 11) * 30) * 86400000 + Math.floor(seededRandom(seed * 13) * 24) * 3600000
+                });
+            }
+            allComments[String(wn)] = comments;
+        }
+        var existing = JSON.parse(localStorage.getItem('ktoon_comments') || '{}');
+        for (var key in allComments) { if (!existing[key]) existing[key] = allComments[key]; }
+        localStorage.setItem('ktoon_comments', JSON.stringify(existing));
+        localStorage.setItem('ktoon_comments_seeded', 'true');
+    }
+
+    // Toast
+    function showToast(message, type) {
+        type = type || 'success';
+        var container = document.querySelector('.toast-container') || (function() {
+            var c = document.createElement('div'); c.className = 'toast-container';
+            document.body.appendChild(c); return c;
+        })();
+        var toast = document.createElement('div');
+        toast.className = 'toast toast-' + type;
+        var icon = type === 'success'
+            ? '<svg class="toast-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg>'
+            : '<svg class="toast-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>';
+        toast.innerHTML = icon + '<span class="toast-message">' + message + '</span>';
+        container.appendChild(toast);
+        setTimeout(function() {
+            toast.style.opacity = '0'; toast.style.transform = 'translateX(100%)';
+            setTimeout(function() { toast.remove(); }, 300);
+        }, 3000);
+    }
+
+    document.addEventListener('DOMContentLoaded', function() {
+        seedComments();
+        var loggedIn = localStorage.getItem('ktoon_logged_in');
+        if (!loggedIn) { window.location.href = 'index-converted.html'; return; }
+
+        // Get user data
+        var users = JSON.parse(localStorage.getItem('ktoon_users') || '[]');
+        var currentUser = null;
+        if (loggedIn === '情绪过度老师') {
+            currentUser = { username: '情绪过度老师', avatar: '../ai-image-tool/yangpian/主用户/主用户头像.png', email: '', phone: '' };
+        } else {
+            for (var i = 0; i < users.length; i++) {
+                if (users[i].username === loggedIn) { currentUser = users[i]; break; }
+            }
+        }
+        if (!currentUser) { window.location.href = 'index-converted.html'; return; }
+
+        // Render profile header
+        var avatarWrap = document.getElementById('profileAvatarWrap');
+        if (currentUser.avatar) {
+            avatarWrap.innerHTML = '<img class="profile-avatar" src="' + currentUser.avatar + '" alt="avatar">';
+        } else {
+            avatarWrap.innerHTML = '<div class="profile-avatar-placeholder"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg></div>';
+        }
+        document.getElementById('profileName').textContent = currentUser.username;
+
+        // Load data
+        var publishedWorks = JSON.parse(localStorage.getItem('ktoon_published_works') || '[]');
+        var myPublished = publishedWorks.filter(function(w) { return w.username === currentUser.username; });
+        var drafts = JSON.parse(localStorage.getItem('aiImageHistory') || '[]');
+        // 合并视频生成历史到草稿
+        var videoDrafts = JSON.parse(localStorage.getItem('ktoonai_video_history') || '[]');
+        videoDrafts.forEach(function(v) {
+            drafts.push({
+                id: v.time || Date.now(),
+                imageUrl: v.url,
+                isVideo: true,
+                title: 'AI 视频',
+                prompt: v.prompt || '',
+                timestamp: v.time ? new Date(v.time).toISOString() : ''
+            });
+        });
+        // 按时间倒序排列
+        drafts.sort(function(a, b) {
+            var ta = a.timestamp ? new Date(a.timestamp).getTime() : 0;
+            var tb = b.timestamp ? new Date(b.timestamp).getTime() : 0;
+            return tb - ta;
+        });
+
+        document.getElementById('statPublished').textContent = myPublished.length;
+        document.getElementById('statDrafts').textContent = drafts.length;
+        document.getElementById('publishedCount').textContent = myPublished.length;
+        document.getElementById('draftsCount').textContent = drafts.length;
+
+        // 计算获赞数
+        var likesData = JSON.parse(localStorage.getItem('ktoon_likes') || '{"userLikes":{},"likeCounts":{}}');
+        var totalLikes = 0;
+        myPublished.forEach(function(w) {
+            var likeCount = likesData.likeCounts[String(w.id)];
+            if (likeCount === undefined) {
+                likeCount = Math.floor(100 + (Math.sin(w.id * 127.1 + 311.7) * 0.5 + 0.5) * 5000);
+            }
+            totalLikes += likeCount;
+        });
+        document.getElementById('statLikes').textContent = formatNum(totalLikes);
+
+        document.getElementById('statFans').textContent = '8921';
+
+        // Tab switching
+        var currentTab = 'published';
+        var gallery = document.getElementById('profileGallery');
+        var emptyState = document.getElementById('emptyState');
+
+        function renderGallery() {
+            gallery.innerHTML = '';
+            var items = currentTab === 'published' ? myPublished : drafts;
+            if (items.length === 0) {
+                gallery.style.display = 'none';
+                emptyState.style.display = 'block';
+                document.getElementById('emptyText').textContent = currentTab === 'published' ? '还没有发布作品，去创作页面发布吧' : '暂无草稿';
+                return;
+            }
+            gallery.style.display = '';
+            emptyState.style.display = 'none';
+
+            items.forEach(function(item) {
+                var card = document.createElement('div');
+                card.className = 'work-card';
+                var mediaSrc = item.image || item.imageUrl || '';
+                var title = item.title || '未命名';
+                var prompt = item.prompt || '';
+                var date = item.timestamp ? new Date(item.timestamp).toLocaleDateString('zh-CN') : '';
+                var isVideo = item.isVideo || mediaSrc.includes('.mp4');
+                if (isVideo) {
+                    card.innerHTML = '<video src="' + mediaSrc + '" muted preload="metadata" style="width:100%;height:100%;object-fit:cover;"></video>' +
+                        '<div class="work-info">' +
+                        '<div class="work-title">' + title + '</div>' +
+                        (date ? '<div class="work-meta">' + date + '</div>' : '') +
+                        '</div>';
+                } else {
+                    card.innerHTML = '<img src="' + mediaSrc + '" alt="' + title + '" loading="lazy">' +
+                        '<div class="work-info">' +
+                        '<div class="work-title">' + title + '</div>' +
+                        (date ? '<div class="work-meta">' + date + '</div>' : '') +
+                        '</div>';
+                }
+                card.addEventListener('click', function() {
+                    if (isVideo) {
+                        showWorkDetail({ id: item.id || ('profile_' + item.timestamp), image: mediaSrc, title: title, prompt: prompt, isVideo: true });
+                    } else {
+                        showWorkDetail({ id: item.id || ('profile_' + item.timestamp), image: mediaSrc, title: title, prompt: prompt });
+                    }
+                });
+                gallery.appendChild(card);
+            });
+        }
+
+        document.querySelectorAll('.profile-tab').forEach(function(tab) {
+            tab.addEventListener('click', function() {
+                document.querySelectorAll('.profile-tab').forEach(function(t) { t.classList.remove('active'); });
+                tab.classList.add('active');
+                currentTab = tab.dataset.tab;
+                renderGallery();
+            });
+        });
+
+        renderGallery();
+
+        // Work detail modal
+        function showWorkDetail(work) {
+            var modal = document.getElementById('workModal');
+            var modalImage = document.getElementById('modalImage');
+            if (work.isVideo) {
+                // 替换为 video 元素
+                var videoEl = document.createElement('video');
+                videoEl.id = 'modalImage';
+                videoEl.src = work.image;
+                videoEl.controls = true;
+                videoEl.style.cssText = 'width:100%;max-height:70vh;border-radius:12px;';
+                modalImage.parentNode.replaceChild(videoEl, modalImage);
+            } else {
+                // 确保是 img 元素
+                if (modalImage.tagName !== 'IMG') {
+                    var imgEl = document.createElement('img');
+                    imgEl.id = 'modalImage';
+                    imgEl.style.cssText = 'width:100%;max-height:70vh;border-radius:12px;object-fit:contain;';
+                    modalImage.parentNode.replaceChild(imgEl, modalImage);
+                    modalImage = imgEl;
+                }
+                modalImage.src = work.image;
+            }
+            document.getElementById('modalPrompt').textContent = work.prompt || '暂无提示词';
+            document.getElementById('modalTitle').textContent = work.title || '未命名';
+
+            // 作者信息
+            var loggedIn = localStorage.getItem('ktoon_logged_in');
+            if (loggedIn === '情绪过度老师') {
+                document.getElementById('modalUsername').textContent = '情绪过度老师';
+                document.getElementById('modalAvatar').src = '../ai-image-tool/yangpian/主用户/主用户头像.png';
+            } else {
+                var users = JSON.parse(localStorage.getItem('ktoon_users') || '[]');
+                var cu = null;
+                for (var i = 0; i < users.length; i++) { if (users[i].username === loggedIn) { cu = users[i]; break; } }
+                document.getElementById('modalUsername').textContent = cu ? cu.username : '';
+                document.getElementById('modalAvatar').src = cu ? (cu.avatar || '') : '';
+            }
+
+            // 从图片路径提取种子作品编号（../ai-image-tool/yangpian/N.png -> N）
+            var imgMatch = (work.image || '').match(/yangpian\/(\d+)\./);
+            var seedKey = imgMatch ? imgMatch[1] : null;
+
+            // 点赞状态
+            var workId = work.id;
+            var likeCount = getLikeCount(workId);
+            if (likeCount === undefined) {
+                likeCount = Math.floor(100 + (Math.sin(workId * 127.1 + 311.7) * 0.5 + 0.5) * 5000);
+                var ld = getLikesData(); ld.likeCounts[String(workId)] = likeCount; saveLikesData(ld);
+            }
+            var liked = loggedIn ? isLikedByUser(workId, loggedIn) : false;
+            document.getElementById('likeCount').textContent = formatNum(likeCount);
+            if (liked) { document.getElementById('likeBtn').classList.add('liked'); }
+            else { document.getElementById('likeBtn').classList.remove('liked'); }
+
+            // 评论（种子作品用图片编号作为 key）
+            var commentKey = seedKey || workId;
+            modal.dataset.workId = workId;
+            modal.dataset.commentKey = commentKey;
+            renderComments(commentKey);
+            setupCommentInput(commentKey);
+
+            // 关注按钮
+            var authorName = document.getElementById('modalUsername').textContent;
+            updateFollowBtn(authorName);
+
+            modal.classList.add('active');
+        }
+        // 点赞功能（支持取消）
+        document.getElementById('likeBtn').addEventListener('click', function() {
+            var modal = document.getElementById('workModal');
+            var workId = modal.dataset.workId;
+            if (!workId) return;
+            var loggedIn = localStorage.getItem('ktoon_logged_in');
+            if (!loggedIn) { showToast('请先登录', 'error'); return; }
+            var nowLiked = toggleLike(workId, loggedIn);
+            var count = getLikeCount(workId);
+            document.getElementById('likeCount').textContent = formatNum(count);
+            if (nowLiked) { document.getElementById('likeBtn').classList.add('liked'); }
+            else { document.getElementById('likeBtn').classList.remove('liked'); }
+        });
+        document.getElementById('modalClose').addEventListener('click', function() {
+            document.getElementById('workModal').classList.remove('active');
+        });
+        document.getElementById('workModal').addEventListener('click', function(e) {
+            if (e.target.id === 'workModal') document.getElementById('workModal').classList.remove('active');
+        });
+        document.getElementById('copyPromptBtn').addEventListener('click', function() {
+            var text = document.getElementById('modalPrompt').textContent;
+            navigator.clipboard.writeText(text).then(function() {
+                var btn = document.getElementById('copyPromptBtn');
+                var orig = btn.innerHTML;
+                btn.innerHTML = '<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg> 已复制';
+                setTimeout(function() { btn.innerHTML = orig; }, 1500);
+            });
+        });
+        document.getElementById('downloadBtn').addEventListener('click', function() {
+            var src = document.getElementById('modalImage').src;
+            if (!src) return;
+            var a = document.createElement('a');
+            a.href = src; a.download = 'ktoonai.png'; a.target = '_blank'; a.click();
+        });
+
+        // Settings dropdown
+        var settingsBtn = document.getElementById('settingsBtn');
+        var settingsDropdown = document.getElementById('settingsDropdown');
+        settingsBtn.addEventListener('click', function(e) {
+            e.stopPropagation();
+            settingsDropdown.classList.toggle('show');
+        });
+        document.addEventListener('click', function() { settingsDropdown.classList.remove('show'); });
+
+        // Logout
+        document.getElementById('logoutBtn').addEventListener('click', function() {
+            localStorage.removeItem('ktoon_logged_in');
+            window.location.href = 'index-converted.html';
+        });
+
+        // Edit profile modal
+        var profileModal = document.getElementById('profileModal');
+        var profileAvatarInput = document.getElementById('profileAvatarInput');
+        var profileAvatarWrapper = document.getElementById('profileAvatarWrapper');
+        var profileAvatarPlaceholder = document.getElementById('profileAvatarPlaceholder');
+        var avatarData = currentUser.avatar || '';
+
+        document.getElementById('editProfileBtn').addEventListener('click', function() {
+            settingsDropdown.classList.remove('show');
+            document.getElementById('profileUsername').value = currentUser.username;
+            document.getElementById('profileEmail').value = currentUser.email || '';
+            document.getElementById('profilePhone').value = currentUser.phone || '';
+            avatarData = currentUser.avatar || '';
+            // Show current avatar
+            var existing = profileAvatarWrapper.querySelector('.profile-edit-avatar-img');
+            if (existing) existing.remove();
+            if (avatarData) {
+                profileAvatarPlaceholder.style.display = 'none';
+                var img = document.createElement('img');
+                img.className = 'profile-edit-avatar-img';
+                img.src = avatarData;
+                profileAvatarWrapper.appendChild(img);
+            } else {
+                profileAvatarPlaceholder.style.display = 'flex';
+            }
+            profileModal.classList.add('active');
+        });
+
+        document.getElementById('profileModalClose').addEventListener('click', function() {
+            profileModal.classList.remove('active');
+        });
+        document.getElementById('profileSkip').addEventListener('click', function() {
+            profileModal.classList.remove('active');
+        });
+
+        // Avatar upload
+        profileAvatarWrapper.addEventListener('click', function() { profileAvatarInput.click(); });
+        profileAvatarInput.addEventListener('change', function(e) {
+            var file = e.target.files[0];
+            if (!file) return;
+            var reader = new FileReader();
+            reader.onload = function(ev) {
+                avatarData = ev.target.result;
+                var existing = profileAvatarWrapper.querySelector('.profile-edit-avatar-img');
+                if (existing) existing.remove();
+                profileAvatarPlaceholder.style.display = 'none';
+                var img = document.createElement('img');
+                img.className = 'profile-edit-avatar-img';
+                img.src = avatarData;
+                profileAvatarWrapper.appendChild(img);
+            };
+            reader.readAsDataURL(file);
+        });
+
+        // Save profile
+        document.getElementById('profileSubmit').addEventListener('click', function() {
+            var username = document.getElementById('profileUsername').value.trim();
+            var email = document.getElementById('profileEmail').value.trim();
+            var phone = document.getElementById('profilePhone').value.trim();
+            if (!username || username.length < 3) { showToast('用户名至少3个字符', 'error'); return; }
+            if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) { showToast('邮箱格式不正确', 'error'); return; }
+            if (phone && !/^1[3-9]\d{9}$/.test(phone)) { showToast('手朿号格式不正确', 'error'); return; }
+
+            // Update in localStorage
+            var oldUsername = currentUser.username;
+            if (username !== '情绪过度老师') {
+                var allUsers = JSON.parse(localStorage.getItem('ktoon_users') || '[]');
+                var idx = allUsers.findIndex(function(u) { return u.username === oldUsername; });
+                if (idx !== -1) {
+                    allUsers[idx].username = username;
+                    allUsers[idx].email = email;
+                    allUsers[idx].phone = phone;
+                    if (avatarData) allUsers[idx].avatar = avatarData;
+                    localStorage.setItem('ktoon_users', JSON.stringify(allUsers));
+                    localStorage.setItem('ktoon_logged_in', username);
+                }
+            }
+            showToast('资料保存成功！', 'success');
+            profileModal.classList.remove('active');
+            setTimeout(function() { location.reload(); }, 500);
+        });
+
+        // Login modal (for other pages consistency, though we redirect if not logged in)
+        var loginModal = document.getElementById('loginModal');
+        var loginSubmit = document.getElementById('loginSubmit');
+        document.getElementById('loginModalClose').addEventListener('click', function() {
+            loginModal.classList.remove('active');
+        });
+        document.getElementById('loginEyeToggle').addEventListener('click', function() {
+            var inp = document.getElementById('loginPassword');
+            var show = inp.type === 'password';
+            inp.type = show ? 'text' : 'password';
+            this.innerHTML = show
+                ? '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/></svg>'
+                : '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>';
+        });
+        loginSubmit.addEventListener('click', function() {
+            var username = document.getElementById('loginUsername').value.trim();
+            var password = document.getElementById('loginPassword').value.trim();
+            if (!username) { showToast('请输入用户名', 'error'); return; }
+            if (!password) { showToast('请输入密码', 'error'); return; }
+            var validUsers = { '情绪过度老师': '12345678' };
+            var stored = JSON.parse(localStorage.getItem('ktoon_users') || '[]');
+            stored.forEach(function(u) { validUsers[u.username] = u.password; });
+            if (validUsers[username] && validUsers[username] === password) {
+                localStorage.setItem('ktoon_logged_in', username);
+                showToast('登录成功！', 'success');
+                loginModal.classList.remove('active');
+                setTimeout(function() { location.reload(); }, 500);
+            } else {
+                showToast('用户名或密码错误', 'error');
+            }
+        });
+
+        // Update navbar login UI
+        var navBtn = document.querySelector('.nav-button .btn-primary');
+        if (navBtn) {
+            var avatarSrc = null;
+            if (loggedIn === '情绪过度老师') {
+                avatarSrc = '../ai-image-tool/yangpian/主用户/主用户头像.png';
+            } else if (currentUser.avatar) {
+                avatarSrc = currentUser.avatar;
+            }
+            if (avatarSrc) {
+                navBtn.innerHTML = '<img class="login-avatar" src="' + avatarSrc + '" alt="avatar">';
+            } else {
+                navBtn.innerHTML = '<span class="login-avatar-placeholder"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg></span>';
+            }
+            navBtn.dataset.loggedIn = 'true';
+        }
+    });
+    </script>
+</body>
+</html>

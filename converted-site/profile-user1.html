@@ -1,0 +1,759 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>画梦者 - ktoonAi</title>
+    <style>
+        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+        :root {
+            --bg: 230 25% 7%; --fg: 220 20% 92%; --card: 230 20% 12%;
+            --border: 230 15% 20%; --muted: 220 10% 55%; --primary: 190 100% 55%;
+            --primary-fg: 230 25% 7%; --radius: 0.75rem;
+        }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            background: hsl(var(--bg)); color: hsl(var(--fg)); min-height: 100vh;
+        }
+        /* Navbar */
+        .navbar {
+            position: fixed; top: 0; left: 0; right: 0; z-index: 50;
+            border-bottom: 1px solid hsl(var(--border) / 0.5);
+            background-color: hsl(var(--bg) / 0.6); backdrop-filter: blur(12px);
+        }
+        .navbar-container {
+            max-width: 1280px; margin: 0 auto; padding: 0 1rem;
+            height: 4rem; display: flex; align-items: center; justify-content: space-between;
+        }
+        .logo {
+            display: flex; align-items: center; gap: 0.5rem;
+            text-decoration: none; color: inherit;
+        }
+        .logo-icon { width: 1.5rem; height: 1.5rem; }
+        .logo-text {
+            font-size: 1.125rem; font-weight: 700;
+            background: linear-gradient(135deg, hsl(var(--primary)) 0%, #8b5cf6 100%);
+            -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
+        }
+        .nav-button { display: none; align-items: center; gap: 0.75rem; }
+        @media (min-width: 1024px) { .nav-button { display: flex; } }
+        .btn-primary {
+            background: linear-gradient(135deg, hsl(var(--primary)) 0%, #8b5cf6 100%);
+            color: hsl(var(--primary-fg)); border: none; padding: 0.5rem 1rem;
+            border-radius: var(--radius); font-size: 0.875rem; font-weight: 500; cursor: pointer;
+        }
+        .mobile-toggle {
+            display: flex; align-items: center; justify-content: center;
+            width: 2.5rem; height: 2.5rem; background: none; border: none;
+            color: hsl(var(--fg)); cursor: pointer;
+        }
+        @media (min-width: 768px) { .mobile-toggle { display: none; } }
+
+        /* Profile Header */
+        .profile-header {
+            max-width: 900px; margin: 0 auto; padding: 80px 2rem 2rem;
+            display: flex; align-items: center; gap: 24px;
+        }
+        .profile-avatar {
+            width: 88px; height: 88px; border-radius: 50%; object-fit: cover;
+            border: 3px solid hsl(var(--border)); flex-shrink: 0;
+        }
+        .profile-info { flex: 1; }
+        .profile-name { font-size: 22px; font-weight: 700; margin-bottom: 4px; }
+        .profile-bio { font-size: 13px; color: hsl(var(--muted)); margin-bottom: 10px; }
+        .profile-stats {
+            display: flex; gap: 20px; font-size: 13px; color: hsl(var(--muted));
+        }
+        .profile-stats span { color: hsl(var(--fg)); font-weight: 600; }
+        .follow-btn { padding: 6px 24px; border-radius: 20px; border: 1px solid hsl(var(--primary)); background: transparent; color: hsl(var(--primary)); font-size: 13px; cursor: pointer; transition: all 0.2s; }
+        .follow-btn:hover { background: hsl(var(--primary)); color: hsl(var(--primary-foreground)); }
+        .follow-btn.followed { background: hsl(var(--muted)); border-color: hsl(var(--border)); color: hsl(var(--muted-foreground)); }
+        .follow-btn.followed:hover { background: hsl(var(--destructive) / 0.1); border-color: hsl(var(--destructive)); color: hsl(var(--destructive)); }
+
+        /* Tabs */
+        .profile-tabs {
+            max-width: 900px; margin: 0 auto; padding: 0 2rem;
+            display: flex; gap: 24px; border-bottom: 1px solid var(--border);
+        }
+        .profile-tab {
+            padding: 12px 0; font-size: 14px; color: var(--muted);
+            cursor: pointer; border-bottom: 2px solid transparent;
+            transition: color 0.2s, border-color 0.2s;
+        }
+        .profile-tab.active {
+            color: var(--fg); border-bottom-color: var(--primary);
+        }
+
+        /* Gallery */
+        .gallery {
+            max-width: 900px; margin: 0 auto; padding: 1.5rem 2rem 4rem;
+            column-count: 3; column-gap: 0.75rem;
+        }
+        @media (max-width: 768px) { .gallery { column-count: 2; } }
+        @media (max-width: 480px) { .gallery { column-count: 2; padding: 1rem; } }
+
+        .work-card {
+            background: var(--card); border-radius: var(--radius);
+            overflow: hidden; border: 1px solid var(--border);
+            cursor: pointer; break-inside: avoid; margin-bottom: 0.75rem;
+            transition: transform 0.2s;
+        }
+        .work-card:hover { transform: translateY(-2px); }
+        .work-card img { width: 100%; display: block; }
+        .work-card .work-info { padding: 8px 10px; }
+        .work-card .work-title {
+            font-size: 12px; color: var(--muted);
+            white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+        }
+        .work-card .work-likes {
+            font-size: 11px; color: #777; display: flex; align-items: center;
+            gap: 3px; margin-top: 3px;
+        }
+
+        /* Modal */
+        .modal {
+            position: fixed; inset: 0; z-index: 999; display: none;
+            background: rgba(0,0,0,0.85); justify-content: center; align-items: center;
+        }
+        .modal.active { display: flex; }
+        .modal-content {
+            display: flex; width: 90vw; max-width: 1000px;
+            max-height: 90vh; background: var(--card); border-radius: 12px;
+            overflow: hidden; position: relative;
+        }
+        .modal-image-wrap {
+            flex: 1 1 60%; display: flex; align-items: center;
+            justify-content: center; background: #111; min-height: 300px;
+        }
+        .modal-image { max-width: 100%; max-height: 85vh; object-fit: contain; }
+        .modal-info {
+            flex: 1 1 40%; display: flex; flex-direction: column;
+            overflow: hidden; min-width: 280px;
+        }
+        .modal-close {
+            position: absolute; top: 12px; right: 12px; z-index: 10;
+            width: 32px; height: 32px; border-radius: 50%;
+            background: rgba(0,0,0,0.5); border: none; color: #fff;
+            font-size: 20px; cursor: pointer; display: flex;
+            align-items: center; justify-content: center;
+        }
+        .modal-prompt-section {
+            flex: 1; padding: 16px 20px; overflow-y: auto;
+        }
+        .modal-prompt-label {
+            font-size: 12px; color: var(--muted); margin-bottom: 8px;
+            display: flex; align-items: center; gap: 4px;
+        }
+        .modal-prompt-text {
+            font-size: 13px; line-height: 1.7; color: var(--fg);
+            word-break: break-all;
+        }
+        .modal-action-bar {
+            display: flex; align-items: center; gap: 16px;
+            padding: 12px 20px; border-top: 1px solid var(--border); flex-shrink: 0;
+        }
+        .modal-action-btn {
+            display: flex; align-items: center; gap: 4px;
+            background: none; border: none; color: var(--muted);
+            font-size: 13px; cursor: pointer; padding: 4px 8px;
+            border-radius: 6px; transition: color 0.2s, background 0.2s;
+        }
+        .modal-action-btn:hover { color: var(--fg); background: rgba(255,255,255,0.05); }
+        .modal-action-btn.liked { color: #ff4757; }
+        .modal-action-btn.liked svg { fill: #ff4757; stroke: #ff4757; }
+        .modal-action-btn svg { width: 16px; height: 16px; }
+
+        @media (max-width: 768px) {
+            .modal-content { flex-direction: column; }
+            .modal-image-wrap { max-height: 50vh; }
+            .modal-info { min-width: unset; }
+            .profile-header { flex-direction: column; text-align: center; }
+            .profile-stats { justify-content: center; }
+        }
+    
+        /* Toast */
+        .toast-container {
+            position: fixed;
+            bottom: 1rem;
+            right: 1rem;
+            z-index: 1000;
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+        }
+        .toast {
+            padding: 1rem 1.5rem;
+            border-radius: var(--radius);
+            background-color: hsl(var(--background));
+            border: 1px solid hsl(var(--border));
+            box-shadow: 0 4px 12px hsl(var(--foreground) / 0.1);
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            animation: slideIn 0.3s ease-out;
+        }
+        .toast-success { border-left: 4px solid hsl(var(--primary)); }
+        .toast-error { border-left: 4px solid hsl(var(--destructive)); }
+        .toast-icon { width: 1.25rem; height: 1.25rem; }
+        .toast-message { font-size: 0.875rem; color: hsl(var(--foreground)); }
+        @keyframes slideIn {
+            from { opacity: 0; transform: translateX(100%); }
+            to { opacity: 1; transform: translateX(0); }
+        }
+        /* Login Modal */
+        .login-modal {
+            position: fixed;
+            top: 0; left: 0;
+            width: 100%; height: 100%;
+            background-color: rgba(0, 0, 0, 0.6);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 2000;
+            opacity: 0;
+            visibility: hidden;
+            transition: opacity 0.3s ease, visibility 0.3s ease;
+        }
+        .login-modal.active { opacity: 1; visibility: visible; }
+        .login-modal-box {
+            background: hsl(var(--card));
+            border-radius: 16px;
+            width: 400px;
+            max-width: 90vw;
+            padding: 40px 36px 32px;
+            border: 1px solid hsl(var(--border));
+            position: relative;
+        }
+        .login-modal-logo {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-bottom: 4px;
+        }
+        .login-modal-logo svg { width: 28px; height: 28px; }
+        .login-modal-logo-text {
+            font-size: 18px;
+            font-weight: 700;
+            background: linear-gradient(135deg, hsl(var(--primary)) 0%, #8b5cf6 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+        .login-modal-title {
+            font-size: 14px;
+            color: hsl(var(--muted-foreground));
+            margin-bottom: 28px;
+        }
+        .login-modal-field { margin-bottom: 18px; }
+        .login-modal-field input {
+            width: 100%;
+            padding: 12px 16px;
+            border-radius: 10px;
+            border: 1px solid hsl(var(--border));
+            background-color: hsl(var(--background));
+            color: hsl(var(--foreground));
+            font-size: 14px;
+            transition: all 0.2s;
+        }
+        .login-modal-field input:focus {
+            outline: none;
+            border-color: hsl(var(--primary));
+            box-shadow: 0 0 0 2px hsl(var(--primary) / 0.2);
+        }
+        .login-modal-field input::placeholder { color: hsl(var(--muted-foreground) / 0.6); }
+        .login-modal-password { position: relative; }
+        .login-modal-password input { padding-right: 44px; }
+        .login-modal-eye {
+            position: absolute;
+            right: 12px; top: 50%;
+            transform: translateY(-50%);
+            background: none; border: none;
+            color: hsl(var(--muted-foreground));
+            cursor: pointer; padding: 4px;
+            display: flex; align-items: center;
+        }
+        .login-modal-eye:hover { color: hsl(var(--foreground)); }
+        .login-modal-submit {
+            width: 100%;
+            padding: 12px;
+            border-radius: 10px;
+            border: none;
+            background: linear-gradient(135deg, hsl(var(--primary)) 0%, #8b5cf6 100%);
+            color: white;
+            font-size: 15px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: opacity 0.2s;
+            margin-top: 8px;
+        }
+        .login-modal-submit:hover { opacity: 0.9; }
+        .login-modal-footer {
+            display: flex;
+            justify-content: space-between;
+            margin-top: 18px;
+            font-size: 13px;
+        }
+        .login-modal-footer a {
+            color: hsl(var(--primary));
+            text-decoration: none;
+            transition: opacity 0.2s;
+        }
+        .login-modal-footer a:hover { opacity: 0.8; }
+        .login-modal-close {
+            position: absolute;
+            top: 16px; right: 16px;
+            background: none; border: none;
+            color: hsl(var(--muted-foreground));
+            font-size: 20px;
+            cursor: pointer; padding: 4px;
+            line-height: 1;
+        }
+        .login-modal-close:hover { color: hsl(var(--foreground)); }
+
+    
+        /* Login Avatar */
+        .login-avatar {
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            object-fit: cover;
+            border: 1px solid hsl(var(--primary));
+            cursor: pointer;
+            transition: transform 0.2s;
+            display: inline-block;
+        }
+        .login-avatar:hover { transform: scale(1.08); }
+
+    
+        /* 登录后头像按钮去掉方框 */
+        .btn-primary[data-logged-in="true"] {
+            background: transparent;
+            padding: 0;
+            border: none;
+            box-shadow: none;
+        }
+        .btn-primary[data-logged-in="true"]:hover {
+            transform: scale(1.08);
+        }
+    
+        .login-avatar-placeholder {
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            background: hsl(var(--muted));
+            border: 1px solid hsl(var(--border));
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: transform 0.2s;
+        }
+        .login-avatar-placeholder:hover { transform: scale(1.08); }
+        .login-avatar-placeholder svg {
+            width: 18px;
+            height: 18px;
+            color: hsl(var(--muted-foreground));
+        }
+
+        .confirm-overlay { position: fixed; inset: 0; z-index: 2000; background: rgba(0,0,0,0.5); display: flex; align-items: center; justify-content: center; }
+        .confirm-box { background: hsl(var(--card)); border: 1px solid hsl(var(--border)); border-radius: 12px; padding: 24px; width: 320px; max-width: 90vw; }
+        .confirm-title { font-size: 16px; font-weight: 600; margin-bottom: 8px; color: hsl(var(--fg)); }
+        .confirm-msg { font-size: 14px; color: hsl(var(--muted-fg)); margin-bottom: 20px; }
+        .confirm-actions { display: flex; gap: 12px; justify-content: flex-end; }
+        .confirm-cancel { padding: 6px 20px; border-radius: 8px; border: 1px solid hsl(var(--border)); background: transparent; color: hsl(var(--fg)); font-size: 14px; cursor: pointer; }
+        .confirm-cancel:hover { background: hsl(var(--muted)); }
+        .confirm-ok { padding: 6px 20px; border-radius: 8px; border: none; background: hsl(var(--destructive)); color: #fff; font-size: 14px; cursor: pointer; }
+        .confirm-ok:hover { opacity: 0.9; }
+    </style>
+</head>
+<body>
+    <!-- Navbar -->
+    <nav class="navbar">
+        <div class="navbar-container">
+            <a href="index-converted.html" class="logo">
+                <svg class="logo-icon" viewBox="0 0 1024 1024" version="1.1" xmlns="http://www.w3.org/2000/svg">
+                    <defs>
+                        <linearGradient id="logo-gradient" x1="0%" y1="0%" x2="100%" y2="100%">
+                            <stop offset="0%" style="stop-color:hsl(190, 100%, 55%)" />
+                            <stop offset="100%" style="stop-color:#8b5cf6" />
+                        </linearGradient>
+                    </defs>
+                    <path d="M447.21664 393.38496l0.9472-0.768a108.416 108.416 0 0 1 10.89536-7.6032l2.69824 1.35168-1.35168 2.69824c-2.69824 0.90112-4.50048 2.2528-5.4016 4.05504-1.80224 4.5056-4.5056 7.6544-8.10496 9.45664l-1.35168 2.70336c-5.4016 5.4016-10.8032 9.00608-16.20992 10.8032l-4.05504 5.40672-2.69824 10.8032-5.40672 1.3568c-27.91936 18.91328-56.28928 49.98144-85.10464 93.2096v-5.4016A20.03968 20.03968 0 0 1 337.47456 512c7.20384-31.52384 24.76544-57.64096 52.6848-78.35136-11.70944 6.2976-27.91936 23.41376-48.63488 51.33312v-18.91328C418.97984 388.61312 461.312 349.89056 468.51584 349.89056a25.4976 25.4976 0 0 1 8.10496 1.35168L406.3744 417.4336l14.85824-2.69824c0-2.70336 0.90112-5.85728 2.69824-9.45664 2.70336-0.90112 5.85728-1.35168 9.45664-1.35168l1.35168-2.70336v2.70336h1.35168l1.35168 1.35168V399.872l2.70336-4.04992h2.69824l1.35168-5.40672c0.90112-1.80224 2.2528-3.1488 4.05504-4.04992v4.04992c-0.1536 0.60416-0.31232 1.152-0.4864 1.65376l-0.54784 1.31584zM329.3696 563.33312v-6.75328l1.28-1.59232-1.28-6.51264c0-4.32128 0.86528-8.64768 2.59072-12.96896l1.4592-3.24096-1.34656-4.05504c27.91424-27.91936 46.37696-43.67872 55.38304-47.2832l4.05504-14.85824 2.70336 2.70336 27.01824-24.32v-5.4016c13.50656-14.40768 21.61152-22.74304 24.32-24.99072 2.69824-2.2528 5.4016-3.82976 8.09984-4.73088h1.35168l9.45664-5.4016 4.05504-2.70336 2.69824-2.70336c0.90112 0 1.80224 0.90112 2.70336 2.70336-23.41376 16.20992-35.57376 27.4688-36.47488 33.77152-10.8032 13.51168-16.20992 23.41888-16.20992 29.7216L329.3696 563.33312z m14.85824-112.128c6.30784-16.20992 15.75936-27.91424 28.36992-35.1232l-28.3648 35.1232z m-110.77632 341.7856c-1.79712-10.8032-2.69824-20.26496-2.69824-28.3648 0-50.43712 4.5056-83.7632 13.50656-99.97312l-0.896 1.71008-0.03072 0.4864a5516.288 5516.288 0 0 1-5.1712 50.96448l-0.65536 6.28224c-2.70336 27.91936-4.05504 50.88256-4.05504 68.89472z m10.79808 34.43712l0.06656-6.56896c0.47616-31.95904 4.06016-70.51776 10.752-115.67616-7.20384 21.61664-10.8032 34.67264-10.8032 39.17824l-0.01536 83.06688z m-32.39424 74.91072c0.2048-94.8224 2.4576-145.2288 6.73792-151.22432l-6.6816 150.21056-0.0768 1.4336 0.02048-0.41984z m46.3872 46.7712c-3.97824 28.1344-6.38464 47.24224-7.22944 57.32864 3.00544-15.5136 5.59104-35.53792 7.7568-60.0832l0.17408-2.17088-0.70144 4.92544z m5.8368-88.63744l-0.44544 8.9088-0.4608 9.3952c-1.0496 22.24128-2.304 42.2656-3.7632 60.07808l-0.4608 5.25312 0.16896-1.16224c3.60448-27.01824 5.40672-48.1792 5.40672-63.49312l-0.32768-14.82752-0.12288-4.1472z m-3.74784-175.62624l-1.15712 8.9344c-6.33856 51.73248-9.50784 104.61696-9.50784 158.65344l-0.02048-0.16384 0.512-9.3184c3.584-68.77184 6.9632-121.33376 10.14784-157.68576l0.0256-0.41984z m425.22112 191.26784l-2.29376-3.1744c-8.704-12.032-13.6448-20.66432-14.80704-25.9072l2.69824-6.7584 1.3824 3.44576 0.1536 0.42496 2.51904-2.51904h2.70336c0.90112 3.60448 4.95104 8.10496 12.15488 13.50656l-12.15488-16.20992 1.35168 1.35168 1.34656 1.35168v-1.35168l25.67168 25.66656-5.40672-8.10496 20.26496 21.61664c-11.70944-20.71552-28.3648-44.1344-49.98656-70.2464 46.83264 48.62976 83.30752 89.61024 109.42464 122.9312-39.6288-52.23424-67.54304-92.76416-83.75296-121.58464l25.00608 33.78176-0.90112-1.27488c-5.57568-7.76704-9.6256-14.52032-12.16-20.25984l-1.14176-2.7904v-8.10496l13.51168 16.20992-12.16-17.5616 78.35648 91.86304 4.04992-2.69824 3.04128 3.03616 3.71712 3.71712 5.4016 4.04992c-19.8144-19.8144-39.6288-45.48096-59.4432-77.0048a7078.84032 7078.84032 0 0 1-51.33312-85.10464c-94.5664-144.9984-146.35008-223.80032-155.35616-236.41088-17.11104-23.41376-37.82656-34.67264-62.14144-33.77152h-4.05504l-2.69824 1.35168c-0.90112 3.59936-1.35168 5.85216-1.35168 6.75328v4.72576c0 2.2528 0.45056 3.3792 1.35168 3.3792l-20.26496 8.10496 4.04992 17.5616-4.04992 1.35168-5.40672-1.35168c-4.5056 2.70336-6.97856 4.5056-7.424 5.40672-0.45568 0.896-0.68096 2.69824-0.68096 5.4016l-12.15488-2.70336 2.69824 6.7584-4.04992 5.4016v6.7584h-5.40672v2.69824c1.80224 3.59936 1.80224 5.4016 0 5.4016v6.7584l-6.75328 5.4016c0 18.01216 3.60448 33.77152 10.8032 47.2832 23.41888 36.02432 42.33216 62.592 56.74496 79.70304 45.0304 63.04256 114.3808 147.2512 208.04096 252.6208 16.20992 8.11008 28.3648 14.86336 36.47488 20.26496l4.05504-4.04992c11.70432 12.60544 18.01216 18.91328 18.90816 18.91328l1.35168-2.70336v-2.70336c-50.432-53.13536-75.648-84.20864-75.648-93.21472l1.34656-1.34656h1.35168c34.2272 34.22208 59.4432 59.88864 75.65312 77.0048-28.82048-32.42496-52.6848-63.9488-71.59808-94.5664l8.99584 11.52zM286.1568 933.30944l0.84992-5.27872c2.0224-12.35968 3.98336-23.15264 5.888-32.36864-4.50048 5.4016-6.74816 18.46272-6.74816 39.17824l0.01024-1.53088z m-0.26624 1.71008l-3.79904 2.51904c-0.59904 4.20352-0.9984 8.00768-1.2032 11.41248l-0.1536 3.26656 0.00512-2.51904c0-14.1312 1.152-34.4064 3.456-60.81536l0.59904-6.72768c2.69824-29.7216 4.04992-52.23936 4.04992-67.54816l4.05504-4.05504 2.70336 8.10496c-3.60448 8.11008-3.60448 21.61664 0 40.52992 4.50048-62.14144 9.45152-107.17184 14.85824-135.0912 2.70336-30.6176 4.04992-54.03648 4.04992-70.2464 4.5056-29.7216 8.11008-52.23936 10.80832-67.54816 10.80832-17.11104 46.60736-52.23424 107.40224-105.3696 60.78976-53.14048 98.8416-82.86208 114.1504-89.1648 87.35744-75.65312 169.76384-144.54784 247.2192-206.6944 15.3088-17.10592 26.11712-30.16704 32.41984-39.17312-9.00608-18.91328-14.40768-33.77152-16.20992-44.57984-7.20384-14.4128-12.60544-24.76544-16.20992-31.07328l-1.35168 1.35168-5.4016-1.35168h-1.35168c0-0.90112 1.80224-3.1488 5.4016-6.75328l-10.8032 5.4016v-10.8032h-6.7584l-4.04992-8.10496c-2.70336 0-4.95616-0.45056-6.7584-1.35168l-1.34656-1.35168 5.4016-2.70336-9.45664 4.05504-8.10496-4.05504c-42.33216 9.0112-87.36256 36.92544-135.0912 83.75808a7078.144 7078.144 0 0 0-112.128 120.23296C425.728 326.02112 376.20224 381.40928 353.68448 414.73536a90.95168 90.95168 0 0 1-1.35168-14.86336c0-2.69824 4.95616-38.05184 14.86336-106.04544s15.3088-103.3472 16.20992-106.05056c17.11104-52.23424 25.66656-90.0608 25.66656-113.47456C409.07264 24.76544 400.96768 0 384.75264 0h-4.0448c-1.80736 1.80224-2.70848 3.60448-2.70848 5.4016l-2.69824 1.35168-2.70336-4.04992L371.2512 0c-4.5056 4.5056-8.10496 7.6544-10.8032 9.45664l-10.80832-4.05504-8.11008 1.35168-9.45152-4.04992C309.5552 9.00608 291.9936 22.0672 279.38816 41.87648c-12.61056 37.82656-19.36896 66.2016-20.27008 85.10976-11.70432 44.1344-23.8592 119.7824-36.47488 226.95424-10.8032 96.36864-17.5616 176.07168-20.25984 239.11424-1.69472 33.90464-2.59584 102.51264-2.69312 205.824L199.68 887.56224c0.90112 31.51872 1.35168 54.9376 1.35168 70.2464l6.7584-81.0496c0.896 3.59936 1.34656 7.64928 1.34656 12.15488 0 10.8032-1.1264 26.56768-3.3792 47.2832-2.2528 20.7104-3.3792 36.47488-3.3792 47.27808 3.6864-22.84032 6.46656-41.76384 8.3456-56.77056l0.0768-0.6656-0.09216 2.27328-3.99872 89.55904-0.27648 6.13376 24.32-202.63936c0 27.01824 0.45056 43.22816 1.34656 48.63488 1.80224-96.36864 9.9072-184.6272 24.32-264.7808-0.90112 53.13536-0.90112 85.10464 0 95.91296l-0.01024-0.08192 0.06144-2.24256c0.10752-2.4832 0.37888-5.4528 0.81408-8.9088l0.4864-3.62496v-31.07328l1.34656-2.69824 4.2496 2.1248 0.3328-2.5856 0.4096-3.24608 0.4096-3.05152 2.70848-1.34656c0 7.20384 0.45056 17.5616 1.34656 31.06816v28.36992c0 7.20384 0.45056 12.16 1.35168 14.85824-3.59936 37.82656-5.85216 71.15264-6.75328 99.968l0.9216 41.48736-0.02048 0.32768 0.03072-0.21504c2.42176-44.9536 5.46304-79.73376 9.13408-104.35584l0.7424-4.7872v51.33312l2.70336-75.648c0.896-29.7216 4.5056-54.0416 10.8032-72.95488v16.21504l1.35168 10.8032c-6.30272 16.21504-9.45664 42.78272-9.45664 79.70816 0 15.3088 0.45056 25.216 1.35168 29.7216a98.2016 98.2016 0 0 0-4.04992 28.3648v36.47488l2.69824 4.05504v24.32l-9.45664 104.01792 5.40672-39.17824 1.35168 8.10496c0 3.60448-0.45056 9.68192-1.35168 18.23744-0.90112 8.55552-1.35168 15.08864-1.35168 19.58912l-0.01024-0.02048 5.41184-26.99776-4.02944 44.26752 1.08544-8.61184c1.46944-11.72992 2.9184-22.76352 4.33664-33.09568l0.86016-6.15424 0.45056 0.896-0.38912-1.37216 0.14336-0.99328c1.05472-7.48544 2.0992-14.58176 3.1232-21.28384l0.9216-5.888z" fill="url(#logo-gradient)" p-id="5410"></path>
+                </svg>
+                <span class="logo-text">ktoonAi</span>
+            </a>
+            <div class="nav-button">
+                <a href="community.html" class="btn-primary" style="text-decoration:none;font-size:13px;">返回社区</a>
+            </div>
+            <button class="mobile-toggle" onclick="window.location.href='community.html'">
+                <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M19 12H5M12 19l-7-7 7-7"/>
+                </svg>
+            </button>
+        </div>
+    </nav>
+
+    <!-- Profile Header -->
+    <div class="profile-header">
+        <img class="profile-avatar" id="profileAvatar" src="" alt="">
+        <div class="profile-info">
+            <div class="profile-name" id="profileName"></div>
+            <div class="profile-bio" id="profileBio"></div>
+            <button class="follow-btn" id="followBtn" style="margin-bottom:10px;display:none;">关注</button>
+            <div class="profile-stats">
+                <div><span id="statWorks">0</span> 作品</div>
+                <div><span id="statLikes">0</span> 获赞</div>
+                <div><span id="statFans">0</span> 粉丝</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Tabs -->
+    <div class="profile-tabs">
+        <div class="profile-tab active">作品 <span id="tabCount">0</span></div>
+    </div>
+
+    <!-- Gallery -->
+    <div class="gallery" id="profileGallery"></div>
+
+    <!-- Modal -->
+    <div class="modal" id="workModal">
+        <div class="modal-content">
+            <button class="modal-close" id="modalClose">&times;</button>
+            <div class="modal-image-wrap">
+                <img class="modal-image" id="modalImage" src="" alt="">
+            </div>
+            <div class="modal-info">
+                <div class="modal-prompt-section">
+                    <div class="modal-prompt-label">
+                        <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>
+                        提示词
+                    </div>
+                    <div class="modal-prompt-text" id="modalPrompt"></div>
+                </div>
+                <div class="modal-action-bar">
+                    <button class="modal-action-btn" id="likeBtn">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>
+                        <span id="likeCount">0</span>
+                    </button>
+                    <button class="modal-action-btn" id="copyPromptBtn">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+                        复制提示词
+                    </button>
+                    <button class="modal-action-btn" id="downloadBtn">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                        下载
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const userData = {"name": "画梦者", "avatar": "../ai-image-tool/yangpian/head/user1.png", "bio": "用画笔记录每一个梦境", "fans": 12800, "works": [{"image": "https://p11-dreamina-sign.byteimg.com/tos-cn-i-tb4s082cfz/1f742fd41c424147bda3452bf6b11817~tplv-tb4s082cfz-aigc_resize:2400:2400.webp?lk3s=4fa96020&x-expires=1779408000&x-signature=I%2BoY57VSht2beEQJdCQTC%2BPuZlI%3D", "prompt": "涂鸦，粗略，极简画的是一只呆头马，大眼睛，鱼眼镜头，插图是手绘的，杂乱的艺术线条。Q版，诙谐，插画，水彩平铺。，特写，古朴典雅，线条粗犷艺术图形插画，，红色填满画面，简约风格，，大胆版画，石刻，双色调，纯色背景--AR --V 5.2", "title": "水彩插画", "likes": 5136, "liked": false}, {"image": "https://p11-dreamina-sign.byteimg.com/tos-cn-i-tb4s082cfz/e12dbc9d3af349c892d5483b60beeeec~tplv-tb4s082cfz-aigc_resize:2400:2400.webp?lk3s=4fa96020&x-expires=1779408000&x-signature=zk51ei3tphceGdNJ6hHOfH9tpik%3D", "prompt": "牡丹花神，凡人修仙传宋玉，朦胧感，cg风格，手绘质感，自然光影，色彩和谐，磨砂，细密颗粒，近景，俯瞰。画面中，人物，发丝细腻，呈现出自然的弯曲。人物的脸部被光照亮，给人一种温暖的感觉。阳光透过树叶在人物的脸上投下了斑驳的阴影，叶片的形状细长，暗夜微光，给人一种温馨且略带忧郁的感觉。", "title": "仙侠世界", "likes": 5136, "liked": false}, {"image": "https://p11-dreamina-sign.byteimg.com/tos-cn-i-tb4s082cfz/b8b9d303e12f49399c642ad094454a3d~tplv-tb4s082cfz-aigc_resize_loss:1080:1080.webp?lk3s=4fa96020&x-expires=1779408000&x-signature=POtmfQdlBFy%2Fo8Ta1pWIjjYFEoU%3D", "prompt": "Extreme telephoto shot in super-dense dawn fog within a primordial forest. Two points of cold, bioluminescent light—the War-Beast's multi-layered irises and vertical slit pupils—burn with focused intensity through the haze. An immense, blurred silhouette of its head and multiple horn structures is barely discernible, outlined only by the faintest light scattering on wet keratin and the way the fog swirls around its colossal form. The scale is conveyed through distorted perspective and deep atmospheric recession, with gigantic, out-of-focus tree trunks receding into the whiteness. Rendered with photorealistic volumetric fog, subtle light diffusion, and HDR detail in the eye glow, creating a profound sense of looming, silent threat and spatial oppression.", "title": "Extreme te", "likes": 5136, "liked": false}, {"image": "https://p11-dreamina-sign.byteimg.com/tos-cn-i-tb4s082cfz/770722e73d6e4c739cdb7e6ebe67615b~tplv-tb4s082cfz-aigc_resize:2048:2048.webp?lk3s=4fa96020&x-expires=1779408000&x-signature=t7bC9lagRfgh37q3rt8H7b3oBGQ%3D", "prompt": "涂鸦，粗略，极简画的是一只呆头鸡，大眼睛，鱼眼镜头，插图是手绘的，杂乱的艺术线条。Q版，诙谐，插画，水彩平铺。，特写，古朴典雅，线条粗犷艺术图形插画，，红色填满画面，简约风格，，大胆版画，石刻，双色调，纯色背景--AR --V 5.2", "title": "水彩插画", "likes": 5136, "liked": false}, {"image": "https://p11-dreamina-sign.byteimg.com/tos-cn-i-tb4s082cfz/631ae339ee3e47e38978d137489d0796~tplv-tb4s082cfz-aigc_resize:2048:2048.webp?lk3s=4fa96020&x-expires=1779408000&x-signature=fAQkH5iaZZirNVlc6rBghnNrQP4%3D", "prompt": "这幅画营造出清新、灵动且充满东方诗意的氛围，画面中，蓝色紫色为主色调，描绘出远山、流云的形态，还有红色的小太阳与花花草草  飞鸟点缀，以绿调绘远山流云，点缀红阳、飞鸟  中式建筑，充满清新灵动的诗意美感的意境，仿佛能让人感受到那份自然山水", "title": "未来都市", "likes": 5136, "liked": false}, {"image": "https://p26-dreamina-sign.byteimg.com/tos-cn-i-tb4s082cfz/e425b97d509640bc8f6f0a5c660c071c~tplv-tb4s082cfz-aigc_resize:2048:2048.webp?lk3s=4fa96020&x-expires=1779408000&x-signature=UkPPAclns5PeU0IcVXQOjY4gCVA%3D", "prompt": "Armin Hofmann 风格，融合原研哉的东方极简美学与 Malika Favre 的矢量渐变人物抽象技法，超高清极致特写画面，极致纯正克莱因蓝纯色背景，展现丹凤眼修仙装扮仙风道骨老者的主题视觉叙事。画面中的身穿古典修仙服饰，长袍飘逸，脸部特写展现出冷静且坚定的丹凤眼，眉宇间透露出神秘气息。周围几何美学的夸张抽象形态，以流畅的线条和渐变色彩勾勒出男子形象的解构变形，肢体动态如同在自由的风中翱翔。\n\n画面的边界由深邃浓黑的风火轮暗域构成，男子凝视远方，展现享受风之自由的神态。半影遮蔽的飞天视角，明暗极致反差的视觉张力，突出面部与背景之间的戏剧性对比。超顶级细节刻画，发丝级精细纹理，衣物的质感通过极致精修呈现，超高清分辨率确保每一个细节的完美展现。\n\nC4D 极致光影立体渲染，结合矢量级平滑渐变色彩肌理，赋予画面无与伦比的立体感和深度。32K 超高清壁纸级精度，确保视觉品质的顶尖表现。白色 紫色 蓝色撞色高级色彩叙事，现代抽象表现主义与极简几何抽象艺术的结合，创造出一个具有时代感和文化深度的视觉叙事。画面高度概念感，撞色，怪诞美学，画面空灵梦幻，怪诞的感觉，大师级构图，杰作，8k。在奇幻的世界中飞速前行，周围弥漫着神秘的氛围忧郁，氛围感，宇宙漫游狂想曲，金色光晕，氛围感，狂草肆意，受光处自带闪粉橘黄金，暖光部分为自发光，发光处有强烈的辉光效果，明暗对比强烈，光影构思巧妙，Armin Hofmann风格，夸张抽象变形的东方神秘靓丽形象，32K壁纸，色彩叙事，现代抽象艺术，神话元素，超高清64K画质，大师级海报构图，虚幻引擎，潇洒的造型，突出极度舒适感，滑稽夸张，真实人像摄影，手写签名R6visual，极具东方韵味\n​", "title": "人像写真", "likes": 29967, "liked": false}, {"image": "https://p11-dreamina-sign.byteimg.com/tos-cn-i-tb4s082cfz/0532210cceec4da789e6c67e4659332a~tplv-tb4s082cfz-aigc_resize_loss:1080:1080.webp?lk3s=4fa96020&x-expires=1779408000&x-signature=uLhxCqYEB0mTy8hroi%2FXO0VWldI%3D", "prompt": "以Moebius（让·吉罗）风格绘制一幅插画，两个少年帅哥西装，一黑一白，黑手党，黑帮，手枪，飘动的细长围巾，装饰华丽，画面中充满极致的细节。自由构图。全身。大动态。现代酷帅的风格。复古漫画质感，黑白色调。危险的感觉。红色调配色。", "title": "美食摄影", "likes": 5136, "liked": false}, {"image": "https://p11-dreamina-sign.byteimg.com/tos-cn-i-tb4s082cfz/79a29c28f1274b2bbaf5e512e32d8243~tplv-tb4s082cfz-aigc_resize:2048:2048.webp?lk3s=4fa96020&x-expires=1779408000&x-signature=RHdBf8p2%2FNZ3DZDc1yhhULV58Ic%3D", "prompt": "氛围感和层次感，结合莫奈油画风格和动漫水彩风格，用清晰笔触和柔和光线展现丰富明朗的色彩。画面中心人物的头发重重地遮住面部，凌乱的头发，运用厚涂技法和流线笔刷，营造朦胧，构图饱满，细节处理细腻，发丝飘动，朦胧，垂眼，梦幻感，营造出充满故事感氛围的画面。采用动态角度，画面以银色和青蓝色为主要色彩，使画面充满颗粒感，自然感，虚化感。腹黑，挑染，具有黑白水墨风格，弥漫着传统水墨画的气息，画面以大面积白色铺陈，背景干净整洁，宣纸的纹理质感清晰可辨，尽显简约与极简之，鲻鱼头少年，亮色眼睛，中式，顶级构图，怪谈美学，流苏，全身，蓝绿色作为点缀，雪天，浅色系复杂层叠服饰", "title": "油画厚涂", "likes": 5136, "liked": false}, {"image": "https://p11-dreamina-sign.byteimg.com/tos-cn-i-tb4s082cfz/3bebd61fea1d4de4933ab3e7942dfb8a~tplv-tb4s082cfz-aigc_resize:2048:2048.webp?lk3s=4fa96020&x-expires=1779408000&x-signature=hRd%2BTX4%2BzITXiyrUcNCdEGPpJNw%3D", "prompt": "极繁主义，未来主义，抽象艺术，LIQUID MIND 液态电子复古荧光风宣传海报，意识流 + 朦胧美叙事设计：1. 视觉主体：以液态光影流动为核心背景，暗调荧光肌理叠加液体波纹；淡橙 + 烟紫柔润渐变撞色，主视觉是液态光影中融化的黑洞轮廓（随液体流动舒展，轮廓边缘带波纹虚化），重影，标题 “LIQUID STATE” 用液态扭曲字体（带波纹反光效果）；2. 信息元素：细节发光字体（带液体流动纹理），传递意识流的流动氛围；“Liquid future”、 “The liquid future has no solid boundaries—every ripple is a tremor of civilization.”、 “Ripples of civilization”、 “Boundless liquid tomorrow”，左侧 “Civilization tremor”“Ripple tremor”；3. 色彩与质感：暗底色 + 淡橙烟紫液态荧光，叠加液体流动的波纹肌理，还原 90 年代液态电子派对的意识流朦胧感；荧光光影的液态流动、信息排版的波纹错位，既凸显意识流的无定型叙事，又通过液体融化强化朦胧美，氛围流动又梦幻。底部大字“LIQUID INFORMATION FLOW”版权信息：“When consciousness liquefies, we become our own oceans—every wave is the heartbeat of the universe.”", "title": "创意海报", "likes": 5136, "liked": false}, {"image": "https://p26-dreamina-sign.byteimg.com/tos-cn-i-tb4s082cfz/8f6d0d311b8046f2bb83c7e6e7d3d618~tplv-tb4s082cfz-aigc_resize:2048:2048.webp?lk3s=4fa96020&x-expires=1779408000&x-signature=7cqA1AnbFHEIerzTIuCbejOC6%2B4%3D", "prompt": "排列式构图。厚涂手绘风格。设计20种当代指挥官，西式，全身形象，25岁年轻男，身材高大完美，身姿挺拔，气宇轩昂，高大苗条，各色长款皮质立领风衣，皮带，帽子，长黑靴，气质，规整严整的制服，威严威风，俊美高颜值，身材完美。制服上有金色标志和纹样，上下左右整齐排列留有间隔。风格颜色多种多样。正面视角。版式设计，复古风格排版，独特的装饰体，配图：朦胧温柔的朋友圈高级聊天背景底图，生活的温柔插画，各种姿势的轮廓，轮廓内填充各种莫兰迪色的格子，点缀武器，克制而温柔的色彩和线条，低饱和的莫兰迪色铺陈开来，光影", "title": "古风武侠", "likes": 29967, "liked": false}, {"image": "https://p26-dreamina-sign.byteimg.com/tos-cn-i-tb4s082cfz/0a4c360d165c4e25a95a2e29a50ffdf3~tplv-tb4s082cfz-aigc_resize:2048:2048.webp?lk3s=4fa96020&x-expires=1779408000&x-signature=1njDxivq75ca38fxN0m6E6AsyJM%3D", "prompt": "随机不同的摄影角度，大张力角度+动态角度，粒子特效+粒子消散，采用极简主义风格，象征对文化的敬畏和包容，画面主题的细节如同被无数纳米粒子构成，从模糊到清晰，营造出一种神秘的意识流氛围，画面主题采用人像粒子元素，背景搭配中性色的黑克莱因蓝色哑光渐变背景，光影与国际流行色相结合，增强画面的时尚感和深邃感，大师级的排版技巧，整体呈现出一种现代视觉画面，通过创意合成，时尚，潮流感，图片合适的地方有极细无衬线字体“BENTHAM 25”、“PG-13”、“Dreamina .AI”、“For intense sequences of peril，some disturbing images and brief strong language”，细闪珠光感，光影层次感，电影质感，梦幻光影，肌理反光，折射光影，光影弥散，抽象表达，艺术氛围，极简艺术海报，细致笔触，极繁主义，超多细节，极繁风格", "title": "人像写真", "likes": 29967, "liked": false}, {"image": "https://p26-dreamina-sign.byteimg.com/tos-cn-i-tb4s082cfz/3064cd6261bd42d6b7692dd76d6b1b5c~tplv-tb4s082cfz-aigc_resize:2048:2048.webp?lk3s=4fa96020&x-expires=1779408000&x-signature=t%2BUQlEiNPeDYx%2BVxGSvSTHdN9Jo%3D", "prompt": "一段超现实、宏观的特写视频，以第一人称视角拍摄，聚焦于一双正在倾斜玻璃罐的手，将其放置到白色陶瓷盘上。玻璃罐中装满了许多活泼可爱的微型小狗。随着手的动作，这些毛茸茸的小狗一只接一只地从罐中倾泻而出，落在盘子上。它们刚一落地，就开始欢快地活动起来。\n立刻开始蹒跚着走动，活泼地四处乱窜，仿佛是在寻找它们的同伴。它们栩栩如生，有些好奇地探出盘子边缘，而另一些则在中间相互挤来挤去。构图简单，背景是一张模糊的深色木纹桌面。光线明亮柔和，营造出小狗们从罐子里倾泻而出时轻柔的绒毛摩擦声和碰撞声，以及微弱的“啪嗒”声。\n它们小巧的脚步行走时发出的声音，以及它们移动时发出的轻柔“窥探”叫声。", "title": "佛国圣境", "likes": 29967, "liked": false}, {"image": "https://p26-dreamina-sign.byteimg.com/tos-cn-i-tb4s082cfz/ac4bbe24a3ef47b98c460941f90c1737~tplv-tb4s082cfz-aigc_resize:2048:2048.webp?lk3s=4fa96020&x-expires=1779408000&x-signature=FnSodD2to%2BYyh6FmWuMk6VSq4PY%3D", "prompt": "双眼放射诱惑人的粉红光，令人眩晕，并以俯冲划铲防御姿势，显得华丽高贵。手划过地面带上夸张的能量，有爱心特效，战斗场景, 特写, 战斗, 酷炫8K超高清微妙的光泽，动态模糊强化携带速度线残影，全局朦胧模糊效果，淡彩调暗光环境，多重曝光与失焦叠加，超广角强透视构图，动态模糊边缘虚化，强烈胶片颗粒与高噪点质感，弥散晕染的暗部层次，夸张扭曲的人物轮廓，超现实景深控制，细节生动完美。浑身流光溢彩，张力十足，压迫感，细节生动完美。极其震撼的一幕，视觉冲击力强，光影彼此交织错杂的梦幻感，朦胧，明暗对比强烈，阴影过渡自然，电影级构图，视觉冲击，超清，极致细节，清晰的线条，高对比，大师级别的作品。立体渲染，精细画笔，超细腻笔触，线条流畅，超清画质，完美品质，高质量，自适应饱和度，专业级打光，大师杰作，自由视角，阴影过渡自然，氛围感，高级感，意境，亮闪，唯美，宿命感拉满，弥散粒子，画面具有层次感。视觉冲击，故事感，高级感，动态感，透出清澈而微光流转的色泽，身体轮廓由内部水光细腻勾勒透明光若隐若现，点缀细微水珠溅落效果,大雨倾洒后的水珠效果，增强被水浸湿的效果", "title": "3D渲染", "likes": 29967, "liked": false}, {"image": "https://p26-dreamina-sign.byteimg.com/tos-cn-i-tb4s082cfz/9f7baf052c334c93a6e913ecea1c662d~tplv-tb4s082cfz-aigc_resize:2048:2048.webp?lk3s=4fa96020&x-expires=1779408000&x-signature=bYzAeiaLt5tTVEHQdT7JaVXahSo%3D", "prompt": "神秘莫测、一幅暗黑风格的设计稿，呈现出神秘的华夏民俗恐怖悬疑未知幻想氛围。画面具有暗黑玄幻感，着重刻画京剧戏魔，通过细腻细节展现其诡异形象，光影昏暗，营造出阴森恐怖的氛围，构图独特，突出主体。弥漫着令人毛骨悚然的气息，仿佛隐藏着无尽的秘密与未知，深邃黑暗的空间中仿佛有无数双眼睛窥视着一切。", "title": "佛国圣境", "likes": 29967, "liked": false}, {"image": "https://p26-dreamina-sign.byteimg.com/tos-cn-i-tb4s082cfz/d34e793111674021a7ad75163df09bd6~tplv-tb4s082cfz-aigc_resize:2048:2048.webp?lk3s=4fa96020&x-expires=1779408000&x-signature=%2BqGytX9rzLPMIKPi%2Fclnrj6uXII%3D", "prompt": "设置一个纯净的单色背景，描绘一位被发光的中式魔幻服饰所包围的人物，服饰上装饰有精致的符文和经文，它们不仅增加了服饰的美感，也赋予了它生命力。人物的眼神坚定，仿佛在面对未知的挑战。整个画面充满了压抑和沉闷的气息，通过3.1模型展现出高度的抽象艺术感和独特的魔幻氛围。超广角强透视构图，张力十足，压迫感，细节生动完美。极其震撼的一幕，视觉冲击力强，光影彼此交织错杂的梦幻感，朦胧，明暗对比强烈，阴影过渡自然，电影级构图，视觉冲击，8K画质，超清，极致细节，清晰的线条，高对比，大师级别的作品。立体渲染，精细画笔，超细腻笔触，线条流畅，超清画质，完美品质，高质量，自适应饱和度，专业级打光，大师杰作，自由视角，阴影过渡自然，氛围感，高级感，意境，亮闪，唯美，宿命感拉满，弥散粒子，画面具有层次感。视觉冲击，故事感，高级感，动态感。", "title": "佛国圣境", "likes": 29967, "liked": false}, {"image": "https://p11-dreamina-sign.byteimg.com/tos-cn-i-tb4s082cfz/1280d2d338684a0391d65b110a2d7deb~tplv-tb4s082cfz-aigc_resize:2048:2048.webp?lk3s=4fa96020&x-expires=1779408000&x-signature=utraeIeuni7W%2B%2BzNU3yuq1tYfR4%3D", "prompt": "ue5效果，立体，强光，丁达尔，明暗对比强烈，多重阴影，渐变感，伦勃朗光，一位身着破旧僧袍的亡灵僧人随风飘动，他的僧袍在风中猎猎作响，其手中紧握着散发着熠熠金光的锡杖，光粒子弥散，锡杖的光芒在黑暗中格外耀眼，照亮了周围一小片区域，营造出神秘而诡异的氛围，手指缠着发光的红线，诡异民俗风格，红线，小铜钱，流动感，神秘，氛围感拉满，模糊雾气，冷色调。繁复垂坠，画面光影明暗对比。模糊红线前景。倾斜构图，仰视角度。", "title": "美食摄影", "likes": 5136, "liked": false}, {"image": "https://p26-dreamina-sign.byteimg.com/tos-cn-i-tb4s082cfz/97ba84f3da244d7c951b5a1a078bddb1~tplv-tb4s082cfz-aigc_resize:2048:2048.webp?lk3s=4fa96020&x-expires=1779408000&x-signature=xbigW%2BaDj4l7xyj6nbUGmgr%2Bko0%3D", "prompt": "北宋时期风格油画暗棕褐色旧版图高清，精细工笔，精细流畅、柔韧有力、充满韵律感。衣纹的勾勒，疏密有致。用色典雅，善于运用对比色，丰富和谐，唐朝时期皇家狩猎图，自然逼真", "title": "油画厚涂", "likes": 29967, "liked": false}, {"image": "https://p26-dreamina-sign.byteimg.com/tos-cn-i-tb4s082cfz/b158c71e8afd484e876d61f0c95e0105~tplv-tb4s082cfz-aigc_resize:2048:2048.webp?lk3s=4fa96020&x-expires=1779408000&x-signature=JaoTvB65Ug9lYHr1riBEM%2BcpS0A%3D", "prompt": "细闪粒子，蓝白色的流体水墨+丙烯颜料，宝蓝色背景，高饱和度，克莱因蓝，动态角度，颜料的涂抹感+肌理感，水透明的清冷感，光影层次感，电影质感，梦幻光影，肌理反光，迷乱，折射光影，光影弥散，抽象表达，艺术氛围，情绪表达和叙事，艺术插画，超现实主义美学，高级的氛围感，层次感，噪点，超现实主义美学，极简人像，画面冷暖强烈对比，高级的氛围感，肌理感+颗粒感，", "title": "人像写真", "likes": 29967, "liked": false}, {"image": "https://p26-dreamina-sign.byteimg.com/tos-cn-i-tb4s082cfz/0a6115c6d3c646b08c40d2be7a354690~tplv-tb4s082cfz-aigc_resize:2048:2048.webp?lk3s=4fa96020&x-expires=1779408000&x-signature=DKrZehd83bk%2FgDmoWiduvVrSgcI%3D", "prompt": "Frank Frazetta绘画风格，奇幻插画大师，奇幻风格电影海报，风格，极繁主义，不对称构图。磨砂感、极具艺术感、震撼人心、视觉冲击力、咖色和深绿色，", "title": "创意海报", "likes": 29967, "liked": false}, {"image": "https://p11-dreamina-sign.byteimg.com/tos-cn-i-tb4s082cfz/0e0162a1a16643348d5dd0801187acbc~tplv-tb4s082cfz-aigc_resize:2048:2048.webp?lk3s=4fa96020&x-expires=1779408000&x-signature=1pXolgvfdNImcI35ZXXytzTrNmY%3D", "prompt": "这是一个经典的回车键按键，回车键Enter，巨大的回车键，3D建模，产品设计，C4D，回车键里面一位程序员在办公，创意设计，超现实，CG动画，纯色背景，局部特写，光线追踪", "title": "3D渲染", "likes": 5136, "liked": false}, {"image": "https://p26-dreamina-sign.byteimg.com/tos-cn-i-tb4s082cfz/a6688bfba6f244e7a74b39982e665a25~tplv-tb4s082cfz-aigc_resize:2048:2048.webp?lk3s=4fa96020&x-expires=1779408000&x-signature=NgXClOh0WOXNULPwruJXcbmeq5Y%3D", "prompt": "CLAMP漫画画风，精致的装饰性构图 线条细腻，角色形象保留CLAMP标志性的纤细轮廓、大眼眸特质； 大动态，动作，细节丰富且层次饱满； 复古漫画质感，高对比度的黑白排线，整体呈现华丽又细腻的叙事性画面氛围。双人，少年帅哥，西装，黑手党，手枪，飘动的细围巾。反重力。非传统色背景，磨砂质感，宣纸，笔触冷硬，手绘风格，凌乱线条，大师级高级感构图，美学巅峰，OC人设。全身。远景。极致光影，黑红色调。", "title": "美食摄影", "likes": 29967, "liked": false}, {"image": "https://p26-dreamina-sign.byteimg.com/tos-cn-i-tb4s082cfz/7ad5383f061542208960096c031f087a~tplv-tb4s082cfz-aigc_resize:2048:2048.webp?lk3s=4fa96020&x-expires=1779408000&x-signature=3J0%2Bp4dXOa1AmNIx0qJRvQSOq5I%3D", "prompt": "超现实，一只巨大的大橘猫在楼宇间穿行，最高的楼只有猫的一半身高。橘猫好奇的看着行驶的蝼蚁般的车辆和更加微小的人群", "title": "猫咪", "likes": 29967, "liked": false}, {"image": "https://p11-dreamina-sign.byteimg.com/tos-cn-i-tb4s082cfz/3441de8b562a4798918b482e0f25c299~tplv-tb4s082cfz-aigc_resize:2048:2048.webp?lk3s=4fa96020&x-expires=1779408000&x-signature=9E3TI%2F88EIFyfJ2wUL1RBGNXEok%3D", "prompt": "CLAMP漫画画风，精致的装饰性构图 线条细腻，角色形象保留CLAMP标志性的纤细轮廓、大眼眸特质； 大动态，动作，细节丰富且层次饱满； 复古漫画质感，高对比度的黑白排线，整体呈现华丽又细腻的叙事性画面氛围。双人，帅气少年，西装，黑帮老大和他的保镖。一黑一白。反重力，朋克风格，非传统色背景，磨砂质感，宣纸，笔触冷硬，手绘风格，凌乱线条，大师级高级感构图，美学巅峰，OC人设。低饱和色调。", "title": "美食摄影", "likes": 5136, "liked": false}, {"image": "https://p11-dreamina-sign.byteimg.com/tos-cn-i-tb4s082cfz/ae510faada85447ebd2111603242e5fa~tplv-tb4s082cfz-aigc_resize:2048:2048.webp?lk3s=4fa96020&x-expires=1779408000&x-signature=oDdElPqrfFz47FxsyEBuHXPx62Q%3D", "prompt": "线条，排线，阴影，狂乱线条和笔触，用狂野的风格绘制，黑色背景，细节，主体融合于环境。水墨风，夸张变形，震撼感，邪恶，暗黑神秘，超现实主义，随机构图，随机镜头。\n人物与长剑占据画面主体，采用中心构图，人物居中，墨色笔触环绕在人物周围，形成稳定而凌厉的视觉重心，画面为竖版长构图，突出角色的果决与剑刃的锋芒\n魔道帝兵，劫天剑。超广角构图，张力十足，压迫感，细节生动完美。极其震撼的一幕，视觉冲击力强，明暗对比强烈，阴影过渡自然，电影级构图，视觉冲击，8K画质，超清，极致细节，清晰的线条，高对比，大师级别的作品。立体渲染，精细画笔，色彩搭配和谐融洽，超细腻笔触，线条流畅，超清画质，完美品质，高质量，自适应饱和度，专业级打光，大师杰作，自由视角，阴影过渡自然，氛围感，高级感，唯美，宿命感拉满，画面具有层次感。视觉冲击，故事感，高级感，动态感。", "title": "水墨丹青", "likes": 5136, "liked": false}, {"image": "https://p26-dreamina-sign.byteimg.com/tos-cn-i-tb4s082cfz/dd3e0c10d7f144c5ac2177647edf55f3~tplv-tb4s082cfz-aigc_resize:2048:2048.webp?lk3s=4fa96020&x-expires=1779408000&x-signature=kDuG0fE0BIUGi1XIXvI8aKYDA%2FU%3D", "prompt": "超写实拍摄，复古胶片，梦核，动态模糊，轻微俯视，第一人称视角，街景，定格少女微笑回头看向镜头的时刻，如梦般，逆光拍摄，画面带有动态模糊，高对比度，复古胶片美学。戏剧性电影感光影。颗粒感纹理，整个画面情绪宁静神秘，用高饱和度、高对比度的色彩组合，营造强烈的视觉冲击。低分辨率、带有颗粒感，画面呈现出细腻油亮光滑的质感。", "title": "人像写真", "likes": 29967, "liked": false}]};
+
+        function formatNum(n) {
+            if (n >= 10000) return (n / 10000).toFixed(1).replace(/\.0$/, '') + 'w';
+            return n.toString();
+        }
+
+        // Init
+        const user = userData;
+        document.getElementById('profileAvatar').src = user.avatar;
+        document.getElementById('profileName').textContent = user.name;
+        document.getElementById('profileBio').textContent = user.bio;
+        document.getElementById('statWorks').textContent = user.works.length;
+        document.getElementById('tabCount').textContent = user.works.length;
+
+        let totalLikes = 0;
+        user.works.forEach(w => { totalLikes += w.likes || 0; });
+        document.getElementById('statLikes').textContent = formatNum(totalLikes);
+        document.getElementById('statFans').textContent = formatNum(user.fans || 0);
+        // 关注功能
+        var profileUsername = '画梦者';
+        var loggedIn = localStorage.getItem('ktoon_logged_in');
+        function getFollows() { return JSON.parse(localStorage.getItem('ktoon_follows') || '{}'); }
+        function saveFollows(data) { localStorage.setItem('ktoon_follows', JSON.stringify(data)); }
+        function isFollowing(target) {
+            if (!loggedIn) return false;
+            return (getFollows()[loggedIn] || []).indexOf(target) !== -1;
+        }
+        function toggleFollow(target) {
+            if (!loggedIn) return false;
+            var f = getFollows();
+            if (!f[loggedIn]) f[loggedIn] = [];
+            var idx = f[loggedIn].indexOf(target);
+            if (idx === -1) { f[loggedIn].push(target); saveFollows(f); return true; }
+            else { f[loggedIn].splice(idx, 1); saveFollows(f); return false; }
+        }
+        var followBtn = document.getElementById('followBtn');
+        if (loggedIn && loggedIn !== profileUsername) {
+            followBtn.style.display = '';
+            if (isFollowing(profileUsername)) { followBtn.textContent = '已关注'; followBtn.classList.add('followed'); }
+            followBtn.addEventListener('click', function() {
+                if (!loggedIn) { document.getElementById('loginModal').classList.add('active'); return; }
+                if (isFollowing(profileUsername)) {
+                    document.getElementById('unfollowConfirm').style.display = 'flex';
+                    document.getElementById('unfollowOk').onclick = function() {
+                        toggleFollow(profileUsername);
+                        followBtn.textContent = '关注'; followBtn.classList.remove('followed');
+                        document.getElementById('unfollowConfirm').style.display = 'none';
+                    };
+                    document.getElementById('unfollowCancel').onclick = function() {
+                        document.getElementById('unfollowConfirm').style.display = 'none';
+                    };
+                } else {
+                    toggleFollow(profileUsername);
+                    followBtn.textContent = '已关注'; followBtn.classList.add('followed');
+                }
+            });
+        }
+
+
+        // Gallery
+        const gallery = document.getElementById('profileGallery');
+        user.works.forEach(work => {
+            const card = document.createElement('div');
+            card.className = 'work-card';
+            card.innerHTML = `
+                <img src="${work.image}" alt="${work.title}" loading="lazy">
+                <div class="work-info">
+                    <div class="work-title">${work.title}</div>
+                    <div class="work-likes">
+                        <svg viewBox="0 0 24 24" width="11" height="11" fill="none" stroke="currentColor" stroke-width="2"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>
+                        ${formatNum(work.likes || 0)}
+                    </div>
+                </div>
+            `;
+            card.addEventListener('click', () => showWorkDetail(work));
+            gallery.appendChild(card);
+        });
+
+        // Modal
+        let currentWork = null;
+        function showWorkDetail(work) {
+            currentWork = work;
+            document.getElementById('modalImage').src = work.image;
+            document.getElementById('modalPrompt').textContent = work.prompt || '暂无提示词';
+            const likeBtn = document.getElementById('likeBtn');
+            const likeCount = document.getElementById('likeCount');
+            likeCount.textContent = formatNum(work.likes || 0);
+            likeBtn.classList.toggle('liked', work.liked);
+            document.getElementById('workModal').classList.add('active');
+        }
+
+        document.getElementById('likeBtn').addEventListener('click', () => {
+            if (!currentWork) return;
+            if (!currentWork.liked) {
+                currentWork.liked = true;
+                currentWork.likes = (currentWork.likes || 0) + 1;
+                document.getElementById('likeBtn').classList.add('liked');
+                document.getElementById('likeCount').textContent = formatNum(currentWork.likes);
+            }
+        });
+
+        document.getElementById('copyPromptBtn').addEventListener('click', () => {
+            const text = document.getElementById('modalPrompt').textContent;
+            navigator.clipboard.writeText(text).then(() => {
+                const btn = document.getElementById('copyPromptBtn');
+                const orig = btn.innerHTML;
+                btn.innerHTML = '<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg> 已复制';
+                setTimeout(() => btn.innerHTML = orig, 1500);
+            });
+        });
+
+        document.getElementById('downloadBtn').addEventListener('click', () => {
+            if (!currentWork) return;
+            const a = document.createElement('a');
+            a.href = currentWork.image;
+            a.download = (currentWork.title || 'ktoonai') + '.png';
+            a.target = '_blank'; a.click();
+        });
+
+        document.getElementById('modalClose').addEventListener('click', () => {
+            document.getElementById('workModal').classList.remove('active');
+        });
+        document.getElementById('workModal').addEventListener('click', (e) => {
+            if (e.target.id === 'workModal') document.getElementById('workModal').classList.remove('active');
+        });
+    </script>
+
+
+    <!-- 取消关注确认弹窗 -->
+    <div class="confirm-overlay" id="unfollowConfirm" style="display:none;">
+        <div class="confirm-box">
+            <div class="confirm-title">取消关注</div>
+            <div class="confirm-msg">你确定不再关注此作者吗？</div>
+            <div class="confirm-actions">
+                <button class="confirm-cancel" id="unfollowCancel">取消</button>
+                <button class="confirm-ok" id="unfollowOk">确定</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 登录弹窗 -->
+    <div class="login-modal" id="loginModal">
+        <div class="login-modal-box">
+            <button class="login-modal-close" id="loginModalClose">&times;</button>
+            <div class="login-modal-logo">
+                <svg width="28" height="28" viewBox="0 0 1024 1024" version="1.1" xmlns="http://www.w3.org/2000/svg">
+                    <defs>
+                        <linearGradient id="login-logo-gradient" x1="0%" y1="0%" x2="100%" y2="100%">
+                            <stop offset="0%" style="stop-color:hsl(190, 100%, 55%)" />
+                            <stop offset="100%" style="stop-color:#8b5cf6" />
+                        </linearGradient>
+                    </defs>
+                    <path d="M447.21664 393.38496l0.9472-0.768a108.416 108.416 0 0 1 10.89536-7.6032l2.69824 1.35168-1.35168 2.69824c-2.69824 0.90112-4.50048 2.2528-5.4016 4.05504-1.80224 4.5056-4.5056 7.6544-8.10496 9.45664l-1.35168 2.70336c-5.4016 5.4016-10.8032 9.00608-16.20992 10.8032l-4.05504 5.40672-2.69824 10.8032-5.40672 1.3568c-27.91936 18.91328-56.28928 49.98144-85.10464 93.2096v-5.4016A20.03968 20.03968 0 0 1 337.47456 512c7.20384-31.52384 24.76544-57.64096 52.6848-78.35136-11.70944 6.2976-27.91936 23.41376-48.63488 51.33312v-18.91328C418.97984 388.61312 461.312 349.89056 468.51584 349.89056a25.4976 25.4976 0 0 1 8.10496 1.35168L406.3744 417.4336l14.85824-2.69824c0-2.70336 0.90112-5.85728 2.69824-9.45664 2.70336-0.90112 5.85728-1.35168 9.45664-1.35168l1.35168-2.70336v2.70336h1.35168l1.35168 1.35168V399.872l2.70336-4.04992h2.69824l1.35168-5.40672c0.90112-1.80224 2.2528-3.1488 4.05504-4.04992v4.04992c-0.1536 0.60416-0.31232 1.152-0.4864 1.65376l-0.54784 1.31584zM329.3696 563.33312v-6.75328l1.28-1.59232-1.28-6.51264c0-4.32128 0.86528-8.64768 2.59072-12.96896l1.4592-3.24096-1.34656-4.05504c27.91424-27.91936 46.37696-43.67872 55.38304-47.2832l4.05504-14.85824 2.70336 2.70336 27.01824-24.32v-5.4016c13.50656-14.40768 21.61152-22.74304 24.32-24.99072 2.69824-2.2528 5.4016-3.82976 8.09984-4.73088h1.35168l9.45664-5.4016 4.05504-2.70336 2.69824-2.70336c0.90112 0 1.80224 0.90112 2.70336 2.70336-23.41376 16.20992-35.57376 27.4688-36.47488 33.77152-10.8032 13.51168-16.20992 23.41888-16.20992 29.7216L329.3696 563.33312z m14.85824-112.128c6.30784-16.20992 15.75936-27.91424 28.36992-35.1232l-28.3648 35.1232z m-110.77632 341.7856c-1.79712-10.8032-2.69824-20.26496-2.69824-28.3648 0-50.43712 4.5056-83.7632 13.50656-99.97312l-0.896 1.71008-0.03072 0.4864a5516.288 5516.288 0 0 1-5.1712 50.96448l-0.65536 6.28224c-2.70336 27.91936-4.05504 50.88256-4.05504 68.89472z m10.79808 34.43712l0.06656-6.56896c0.47616-31.95904 4.06016-70.51776 10.752-115.67616-7.20384 21.61664-10.8032 34.67264-10.8032 39.17824l-0.01536 83.06688z m-32.39424 74.91072c0.2048-94.8224 2.4576-145.2288 6.73792-151.22432l-6.6816 150.21056-0.0768 1.4336 0.02048-0.41984z m46.3872 46.7712c-3.97824 28.1344-6.38464 47.24224-7.22944 57.32864 3.00544-15.5136 5.59104-35.53792 7.7568-60.0832l0.17408-2.17088-0.70144 4.92544z m5.8368-88.63744l-0.44544 8.9088-0.4608 9.3952c-1.0496 22.24128-2.304 42.2656-3.7632 60.07808l-0.4608 5.25312 0.16896-1.16224c3.60448-27.01824 5.40672-48.1792 5.40672-63.49312l-0.32768-14.82752-0.12288-4.1472z m-3.74784-175.62624l-1.15712 8.9344c-6.33856 51.73248-9.50784 104.61696-9.50784 158.65344l-0.02048-0.16384 0.512-9.3184c3.584-68.77184 6.9632-121.33376 10.14784-157.68576l0.0256-0.41984z m425.22112 191.26784l-2.29376-3.1744c-8.704-12.032-13.6448-20.66432-14.80704-25.9072l2.69824-6.7584 1.3824 3.44576 0.1536 0.42496 2.51904-2.51904h2.70336c0.90112 3.60448 4.95104 8.10496 12.15488 13.50656l-12.15488-16.20992 1.35168 1.35168 1.34656 1.35168v-1.35168l25.67168 25.66656-5.40672-8.10496 20.26496 21.61664c-11.70944-20.71552-28.3648-44.1344-49.98656-70.2464 46.83264 48.62976 83.30752 89.61024 109.42464 122.9312-39.6288-52.23424-67.54304-92.76416-83.75296-121.58464l25.00608 33.78176-0.90112-1.27488c-5.57568-7.76704-9.6256-14.52032-12.16-20.25984l-1.14176-2.7904v-8.10496l13.51168 16.20992-12.16-17.5616 78.35648 91.86304 4.04992-2.69824 3.04128 3.03616 3.71712 3.71712 5.4016 4.04992c-19.8144-19.8144-39.6288-45.48096-59.4432-77.0048a7078.84032 7078.84032 0 0 1-51.33312-85.10464c-94.5664-144.9984-146.35008-223.80032-155.35616-236.41088-17.11104-23.41376-37.82656-34.67264-62.14144-33.77152h-4.05504l-2.69824 1.35168c-0.90112 3.59936-1.35168 5.85216-1.35168 6.75328v4.72576c0 2.2528 0.45056 3.3792 1.35168 3.3792l-20.26496 8.10496 4.04992 17.5616-4.04992 1.35168-5.40672-1.35168c-4.5056 2.70336-6.97856 4.5056-7.424 5.40672-0.45568 0.896-0.68096 2.69824-0.68096 5.4016l-12.15488-2.70336 2.69824 6.7584-4.04992 5.4016v6.7584h-5.40672v2.69824c1.80224 3.59936 1.80224 5.4016 0 5.4016v6.7584l-6.75328 5.4016c0 18.01216 3.60448 33.77152 10.8032 47.2832 23.41888 36.02432 42.33216 62.592 56.74496 79.70304 45.0304 63.04256 114.3808 147.2512 208.04096 252.6208 16.20992 8.11008 28.3648 14.86336 36.47488 20.26496l4.05504-4.04992c11.70432 12.60544 18.01216 18.91328 18.90816 18.91328l1.35168-2.70336v-2.70336c-50.432-53.13536-75.648-84.20864-75.648-93.21472l1.34656-1.34656h1.35168c34.2272 34.22208 59.4432 59.88864 75.65312 77.0048-28.82048-32.42496-52.6848-63.9488-71.59808-94.5664l8.99584 11.52zM286.1568 933.30944l0.84992-5.27872c2.0224-12.35968 3.98336-23.15264 5.888-32.36864-4.50048 5.4016-6.74816 18.46272-6.74816 39.17824l0.01024-1.53088z m-0.26624 1.71008l-3.79904 2.51904c-0.59904 4.20352-0.9984 8.00768-1.2032 11.41248l-0.1536 3.26656 0.00512-2.51904c0-14.1312 1.152-34.4064 3.456-60.81536l0.59904-6.72768c2.69824-29.7216 4.04992-52.23936 4.04992-67.54816l4.05504-4.05504 2.70336 8.10496c-3.60448 8.11008-3.60448 21.61664 0 40.52992 4.50048-62.14144 9.45152-107.17184 14.85824-135.0912 2.70336-30.6176 4.04992-54.03648 4.04992-70.2464 4.5056-29.7216 8.11008-52.23936 10.80832-67.54816 10.80832-17.11104 46.60736-52.23424 107.40224-105.3696 60.78976-53.14048 98.8416-82.86208 114.1504-89.1648 87.35744-75.65312 169.76384-144.54784 247.2192-206.6944 15.3088-17.10592 26.11712-30.16704 32.41984-39.17312-9.00608-18.91328-14.40768-33.77152-16.20992-44.57984-7.20384-14.4128-12.60544-24.76544-16.20992-31.07328l-1.35168 1.35168-5.4016-1.35168h-1.35168c0-0.90112 1.80224-3.1488 5.4016-6.75328l-10.8032 5.4016v-10.8032h-6.7584l-4.04992-8.10496c-2.70336 0-4.95616-0.45056-6.7584-1.35168l-1.34656-1.35168 5.4016-2.70336-9.45664 4.05504-8.10496-4.05504c-42.33216 9.0112-87.36256 36.92544-135.0912 83.75808a7078.144 7078.144 0 0 0-112.128 120.23296C425.728 326.02112 376.20224 381.40928 353.68448 414.73536a90.95168 90.95168 0 0 1-1.35168-14.86336c0-2.69824 4.95616-38.05184 14.86336-106.04544s15.3088-103.3472 16.20992-106.05056c17.11104-52.23424 25.66656-90.0608 25.66656-113.47456C409.07264 24.76544 400.96768 0 384.75264 0h-4.0448c-1.80736 1.80224-2.70848 3.60448-2.70848 5.4016l-2.69824 1.35168-2.70336-4.04992L371.2512 0c-4.5056 4.5056-8.10496 7.6544-10.8032 9.45664l-10.80832-4.05504-8.11008 1.35168-9.45152-4.04992C309.5552 9.00608 291.9936 22.0672 279.38816 41.87648c-12.61056 37.82656-19.36896 66.2016-20.27008 85.10976-11.70432 44.1344-23.8592 119.7824-36.47488 226.95424-10.8032 96.36864-17.5616 176.07168-20.25984 239.11424-1.69472 33.90464-2.59584 102.51264-2.69312 205.824L199.68 887.56224c0.90112 31.51872 1.35168 54.9376 1.35168 70.2464l6.7584-81.0496c0.896 3.59936 1.34656 7.64928 1.34656 12.15488 0 10.8032-1.1264 26.56768-3.3792 47.2832-2.2528 20.7104-3.3792 36.47488-3.3792 47.27808 3.6864-22.84032 6.46656-41.76384 8.3456-56.77056l0.0768-0.6656-0.09216 2.27328-3.99872 89.55904-0.27648 6.13376 24.32-202.63936c0 27.01824 0.45056 43.22816 1.34656 48.63488 1.80224-96.36864 9.9072-184.6272 24.32-264.7808-0.90112 53.13536-0.90112 85.10464 0 95.91296l-0.01024-0.08192 0.06144-2.24256c0.10752-2.4832 0.37888-5.4528 0.81408-8.9088l0.4864-3.62496v-31.07328l1.34656-2.69824 4.2496 2.1248 0.3328-2.5856 0.4096-3.24608 0.4096-3.05152 2.70848-1.34656c0 7.20384 0.45056 17.5616 1.34656 31.06816v28.36992c0 7.20384 0.45056 12.16 1.35168 14.85824-3.59936 37.82656-5.85216 71.15264-6.75328 99.968l0.9216 41.48736-0.02048 0.32768 0.03072-0.21504c2.42176-44.9536 5.46304-79.73376 9.13408-104.35584l0.7424-4.7872v51.33312l2.70336-75.648c0.896-29.7216 4.5056-54.0416 10.8032-72.95488v16.21504l1.35168 10.8032c-6.30272 16.21504-9.45664 42.78272-9.45664 79.70816 0 15.3088 0.45056 25.216 1.35168 29.7216a98.2016 98.2016 0 0 0-4.04992 28.3648v36.47488l2.69824 4.05504v24.32l-9.45664 104.01792 5.40672-39.17824 1.35168 8.10496c0 3.60448-0.45056 9.68192-1.35168 18.23744-0.90112 8.55552-1.35168 15.08864-1.35168 19.58912l-0.01024-0.02048 5.41184-26.99776-4.02944 44.26752 1.08544-8.61184c1.46944-11.72992 2.9184-22.76352 4.33664-33.09568l0.86016-6.15424 0.45056 0.896-0.38912-1.37216 0.14336-0.99328c1.05472-7.48544 2.0992-14.58176 3.1232-21.28384l0.9216-5.888z" fill="url(#login-logo-gradient)" p-id="5410"></path>
+                </svg>
+                <span class="login-modal-logo-text">Ktoonai</span>
+            </div>
+            <div class="login-modal-title">欢迎登录Ktoonai</div>
+            <div class="login-modal-field">
+                <input type="text" id="loginUsername" placeholder="请输入用户名" autocomplete="username">
+            </div>
+            <div class="login-modal-field login-modal-password">
+                <input type="password" id="loginPassword" placeholder="请输入密码" autocomplete="current-password">
+                <button class="login-modal-eye" id="loginEyeToggle" type="button">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+                </button>
+            </div>
+            <button class="login-modal-submit" id="loginSubmit">登录</button>
+            <div class="login-modal-footer">
+                <a href="forgot-password.html">忘记密码?</a>
+                <a href="register.html">没有账号?</a>
+            </div>
+        </div>
+    </div>
+
+
+    <script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Toast notification system
+        function showToast(message, type) {
+            type = type || 'success';
+            var container = document.querySelector('.toast-container') || createToastContainer();
+            var toast = document.createElement('div');
+            toast.className = 'toast toast-' + type;
+            var icon = type === 'success'
+                ? '<svg class="toast-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg>'
+                : '<svg class="toast-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>';
+            toast.innerHTML = icon + '<span class="toast-message">' + message + '</span>';
+            container.appendChild(toast);
+            setTimeout(function() {
+                toast.style.opacity = '0';
+                toast.style.transform = 'translateX(100%)';
+                setTimeout(function() { toast.remove(); }, 300);
+            }, 3000);
+        }
+
+        function createToastContainer() {
+            var container = document.createElement('div');
+            container.className = 'toast-container';
+            document.body.appendChild(container);
+            return container;
+        }
+
+        // Login modal
+        var loginModal = document.getElementById('loginModal');
+        if (!loginModal) return;
+
+        var loginModalClose = document.getElementById('loginModalClose');
+        var loginEyeToggle = document.getElementById('loginEyeToggle');
+        var loginPassword = document.getElementById('loginPassword');
+        var loginSubmit = document.getElementById('loginSubmit');
+
+        function openLoginModal(e) {
+            if (e) { e.preventDefault(); e.stopPropagation(); }
+            loginModal.classList.add('active');
+        }
+
+        function closeLoginModal() {
+            loginModal.classList.remove('active');
+        }
+
+        // Open modal on login button click
+        document.querySelectorAll('.btn-primary, .nav-btn, [class*="login"], a').forEach(function(btn) {
+            if (btn.textContent.trim() === '登录' && btn.id !== 'loginSubmit') {
+                btn.addEventListener('click', openLoginModal);
+            }
+        });
+
+        loginModalClose.addEventListener('click', closeLoginModal);
+        loginModal.addEventListener('click', function(e) {
+            if (e.target === loginModal) closeLoginModal();
+        });
+
+        // Password eye toggle
+        loginEyeToggle.addEventListener('click', function() {
+            var isPassword = loginPassword.type === 'password';
+            loginPassword.type = isPassword ? 'text' : 'password';
+            loginEyeToggle.innerHTML = isPassword
+                ? '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/></svg>'
+                : '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>';
+        });
+
+        // Login submit
+        loginSubmit.addEventListener('click', function() {
+            var username = document.getElementById('loginUsername').value.trim();
+            var password = loginPassword.value.trim();
+            if (!username) { showToast('请输入用户名', 'error'); return; }
+            if (!password) { showToast('请输入密码', 'error'); return; }
+
+            var validUsers = { '情绪过度老师': '12345678' };
+            var stored = JSON.parse(localStorage.getItem('ktoon_users') || '[]');
+            stored.forEach(function(u) { validUsers[u.username] = u.password; });
+
+            if (validUsers[username] && validUsers[username] === password) {
+                localStorage.setItem('ktoon_logged_in', username);
+                showToast('登录成功！', 'success');
+                closeLoginModal();
+                updateLoginUI();
+            } else {
+                showToast('用户名或密码错误', 'error');
+            }
+        });
+
+        // Update login button UI
+        function updateLoginUI() {
+                var loggedIn = localStorage.getItem('ktoon_logged_in');
+                var users = JSON.parse(localStorage.getItem('ktoon_users') || '[]');
+                var currentUser = null;
+                if (loggedIn) {
+                    for (var i = 0; i < users.length; i++) {
+                        if (users[i].username === loggedIn) { currentUser = users[i]; break; }
+                    }
+                }
+                document.querySelectorAll('.btn-primary, .nav-btn, [class*="login"], a').forEach(function(btn) {
+                    if ((btn.textContent.trim() === '\u767b\u5f55' || btn.dataset.loggedIn === 'true') && btn.id !== 'loginSubmit') {
+                        if (loggedIn) {
+                            var avatarSrc = null;
+                            if (loggedIn === '\u60c5\u7eea\u8fc7\u5ea6\u8001\u5e08') {
+                                avatarSrc = '../ai-image-tool/yangpian/主用户/主用户头像.png';
+                            } else if (currentUser && currentUser.avatar) {
+                                avatarSrc = currentUser.avatar;
+                            }
+                            if (avatarSrc) {
+                                btn.innerHTML = '<img class="login-avatar" src="' + avatarSrc + '" alt="avatar">';
+                            } else {
+                                btn.innerHTML = '<span class="login-avatar-placeholder"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg></span>';
+                            }
+                            btn.dataset.loggedIn = 'true';
+                            btn.onclick = function(e) {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            window.location.href = 'my-profile.html';
+                        };
+                        } else {
+                            btn.textContent = '\u767b\u5f55';
+                            delete btn.dataset.loggedIn;
+                        }
+                    }
+                });
+
+            }
+        updateLoginUI();
+    });
+    </script>
+
+</body>
+</html>

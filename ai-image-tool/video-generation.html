@@ -1,0 +1,775 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ktoonAi - AI 视频生成</title>
+    <style>
+        *, *::before, *::after {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        :root {
+            --background: 230 25% 7%;
+            --foreground: 220 20% 92%;
+            --card: 230 20% 12%;
+            --card-foreground: 220 20% 92%;
+            --primary: 190 100% 55%;
+            --primary-foreground: 230 25% 7%;
+            --secondary: 320 80% 60%;
+            --secondary-foreground: 220 20% 95%;
+            --muted: 230 15% 18%;
+            --muted-foreground: 220 10% 55%;
+            --accent: 270 60% 55%;
+            --accent-foreground: 220 20% 95%;
+            --destructive: 0 84.2% 60.2%;
+            --destructive-foreground: 210 40% 98%;
+            --border: 230 15% 20%;
+            --input: 230 15% 20%;
+            --ring: 190 100% 55%;
+            --radius: 0.75rem;
+            --neon-cyan: 190 100% 55%;
+            --neon-pink: 320 80% 60%;
+            --neon-purple: 270 60% 55%;
+            --shadow-card: 0 8px 32px hsl(0 0% 0% / 0.4);
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            background-color: hsl(var(--background));
+            color: hsl(var(--foreground));
+            line-height: 1.5;
+            -webkit-font-smoothing: antialiased;
+            min-height: 100vh;
+        }
+
+        .container {
+            width: 100%;
+            max-width: 1280px;
+            margin: 0 auto;
+            padding: 0 1rem;
+        }
+
+        .hidden { display: none !important; }
+
+        /* Page Header */
+        .page-header {
+            text-align: center;
+            margin-bottom: 1.5rem;
+        }
+
+        .page-title {
+            font-size: 2rem;
+            font-weight: 700;
+            background: linear-gradient(135deg, hsl(var(--primary)) 0%, #8b5cf6 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        /* Content Layout */
+        .content-container {
+            width: 100%;
+            max-width: 1400px;
+            margin: 0 auto;
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 3rem;
+            align-items: start;
+        }
+
+        /* Settings Panel */
+        .settings-panel {
+            background-color: hsl(var(--card));
+            border: 1px solid hsl(var(--border));
+            border-radius: 1rem;
+            padding: 3rem;
+            width: 100%;
+        }
+
+        .settings-panel h2 {
+            font-size: 1.25rem;
+            font-weight: 600;
+            margin-bottom: 1.5rem;
+            color: hsl(var(--foreground));
+            text-align: center;
+        }
+
+        .form-group {
+            margin-bottom: 1.25rem;
+        }
+
+        .form-group label {
+            display: block;
+            font-size: 1rem;
+            color: hsl(var(--muted-foreground));
+            margin-bottom: 0.5rem;
+            font-weight: 500;
+        }
+
+        .form-group select,
+        .form-group input[type="text"],
+        .form-group input[type="password"] {
+            width: 100%;
+            padding: 1rem 1.25rem;
+            border-radius: var(--radius);
+            border: 1px solid hsl(var(--border));
+            background-color: hsl(var(--background));
+            color: hsl(var(--foreground));
+            font-size: 1rem;
+            transition: all 0.2s;
+        }
+
+        .form-group select:focus,
+        .form-group input:focus {
+            outline: none;
+            border-color: hsl(var(--primary));
+            box-shadow: 0 0 0 2px hsl(var(--primary) / 0.2);
+        }
+
+        .form-group select {
+            appearance: none;
+            -webkit-appearance: none;
+            -moz-appearance: none;
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='none' stroke='%23a0a0a0' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
+            background-repeat: no-repeat;
+            background-position: right 1rem center;
+            background-size: 1.25rem;
+            padding-right: 3rem;
+        }
+
+        /* History Section */
+        .history-section {
+            margin-top: 1.5rem;
+            padding: 1rem;
+            background-color: hsl(var(--muted) / 0.3);
+            border-radius: var(--radius);
+            border: 1px solid hsl(var(--border));
+        }
+
+        .history-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1rem;
+        }
+
+        .history-title {
+            font-size: 0.875rem;
+            font-weight: 600;
+            color: hsl(var(--primary));
+            margin: 0;
+        }
+
+        .history-list {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(80px, 1fr));
+            gap: 0.5rem;
+            max-height: 150px;
+            overflow-y: auto;
+        }
+
+        .history-item {
+            position: relative;
+            cursor: pointer;
+            border-radius: var(--radius);
+            overflow: hidden;
+            aspect-ratio: 16/9;
+            background-color: hsl(var(--muted));
+            transition: transform 0.2s;
+        }
+
+        .history-item:hover {
+            transform: scale(1.05);
+        }
+
+        .history-item video,
+        .history-item img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        .history-item-delete {
+            position: absolute;
+            top: 2px;
+            right: 2px;
+            width: 16px;
+            height: 16px;
+            border-radius: 50%;
+            background-color: hsl(var(--destructive));
+            color: white;
+            border: none;
+            font-size: 10px;
+            cursor: pointer;
+            display: none;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .history-item:hover .history-item-delete {
+            display: flex;
+        }
+
+        /* Prompt Section */
+        .prompt-section {
+            background-color: hsl(var(--card));
+            border: 1px solid hsl(var(--border));
+            border-radius: 1rem;
+            padding: 3rem;
+            width: 100%;
+        }
+
+        .prompt-section h2 {
+            font-size: 1.25rem;
+            font-weight: 600;
+            margin-bottom: 1.5rem;
+            color: hsl(var(--foreground));
+            text-align: center;
+        }
+
+        .prompt-textarea {
+            width: 100%;
+            min-height: 200px;
+            padding: 1.25rem;
+            border-radius: var(--radius);
+            border: 1px solid hsl(var(--border));
+            background-color: hsl(var(--background));
+            color: hsl(var(--foreground));
+            font-size: 1rem;
+            resize: vertical;
+            transition: all 0.2s;
+        }
+
+        .prompt-textarea:focus {
+            outline: none;
+            border-color: hsl(var(--primary));
+            box-shadow: 0 0 0 2px hsl(var(--primary) / 0.2);
+        }
+
+        .action-buttons {
+            display: flex;
+            gap: 1rem;
+            margin-top: 1.5rem;
+            flex-wrap: wrap;
+        }
+
+        .action-buttons .btn-primary {
+            flex: 1;
+            min-width: 150px;
+            padding: 1rem 2rem;
+            font-size: 1rem;
+        }
+
+        .action-buttons .btn-secondary {
+            padding: 1rem 2rem;
+            font-size: 1rem;
+        }
+
+        /* Buttons */
+        .btn-primary {
+            padding: 0.5rem 1.25rem;
+            border-radius: var(--radius);
+            background-color: hsl(var(--primary));
+            font-size: 0.875rem;
+            font-weight: 600;
+            color: hsl(var(--primary-foreground));
+            border: none;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .btn-primary:hover {
+            transform: scale(1.05);
+        }
+
+        .btn-secondary {
+            padding: 0.5rem 1.25rem;
+            border-radius: var(--radius);
+            background-color: transparent;
+            border: 1px solid hsl(var(--border));
+            color: hsl(var(--foreground));
+            font-size: 0.875rem;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .btn-secondary:hover {
+            border-color: hsl(var(--primary));
+            color: hsl(var(--primary));
+        }
+
+        /* Result Container */
+        .result-container {
+            margin-top: 2rem;
+            padding: 2rem;
+            background-color: hsl(var(--muted) / 0.3);
+            border-radius: var(--radius);
+            border: 1px solid hsl(var(--border));
+            min-height: 300px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: 100%;
+        }
+
+        .loading {
+            text-align: center;
+        }
+
+        .gen-queue-item {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 10px 14px;
+            margin-bottom: 8px;
+            background: hsl(var(--muted) / 0.5);
+            border-radius: 8px;
+            font-size: 0.875rem;
+        }
+
+        .gen-queue-item .spinner {
+            width: 20px;
+            height: 20px;
+            min-width: 20px;
+            border: 2px solid hsl(var(--border));
+            border-top-color: hsl(var(--primary));
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        .gen-queue-item .gen-model {
+            font-weight: 500;
+            color: hsl(var(--foreground));
+        }
+
+        .gen-queue-item .gen-time {
+            margin-left: auto;
+            color: hsl(var(--muted-foreground));
+            font-variant-numeric: tabular-nums;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        .result-video {
+            text-align: center;
+            width: 100%;
+        }
+
+        .result-video video {
+            max-width: 100%;
+            max-height: 500px;
+            border-radius: var(--radius);
+            box-shadow: var(--shadow-card);
+        }
+
+        .video-actions {
+            display: flex;
+            gap: 1rem;
+            justify-content: center;
+            margin-top: 1rem;
+        }
+
+        .error-message {
+            color: hsl(var(--destructive));
+            text-align: center;
+            padding: 1rem;
+        }
+
+        /* Login Modal */
+        .login-modal {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.6); display: flex; align-items: center; justify-content: center;
+            z-index: 9999; opacity: 0; visibility: hidden; transition: opacity 0.3s, visibility 0.3s;
+        }
+        .login-modal.active { opacity: 1; visibility: visible; }
+        .login-modal-box {
+            background: hsl(var(--card)); border-radius: 16px; padding: 36px 32px 28px;
+            width: 360px; max-width: 92vw; position: relative;
+            border: 1px solid hsl(var(--border)); box-shadow: 0 8px 40px rgba(0,0,0,0.5);
+        }
+        .login-modal-logo { display: flex; align-items: center; justify-content: center; gap: 8px; margin-bottom: 18px; }
+        .login-modal-logo-text {
+            font-size: 18px; font-weight: 700;
+            background: linear-gradient(135deg, hsl(var(--primary)) 0%, #8b5cf6 100%);
+            -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
+        }
+        .login-modal-title { text-align: center; font-size: 15px; color: hsl(var(--muted-foreground)); margin-bottom: 22px; }
+        .login-modal-field { margin-bottom: 14px; }
+        .login-modal-field input {
+            width: 100%; padding: 11px 14px; border-radius: 10px;
+            border: 1px solid hsl(var(--border)); background: hsl(var(--background));
+            color: hsl(var(--foreground)); font-size: 14px; outline: none; transition: border 0.2s;
+        }
+        .login-modal-field input:focus { border-color: hsl(var(--primary)); }
+        .login-modal-field input::placeholder { color: hsl(var(--muted-foreground) / 0.6); }
+        .login-modal-password { position: relative; }
+        .login-modal-password input { padding-right: 44px; }
+        .login-modal-eye {
+            position: absolute; right: 12px; top: 50%; transform: translateY(-50%);
+            background: none; border: none; color: hsl(var(--muted-foreground));
+            cursor: pointer; padding: 4px; display: flex; align-items: center;
+        }
+        .login-modal-eye:hover { color: hsl(var(--foreground)); }
+        .login-modal-submit {
+            width: 100%; padding: 12px; border-radius: 10px; border: none;
+            background: linear-gradient(135deg, hsl(var(--primary)) 0%, #8b5cf6 100%);
+            color: white; font-size: 15px; font-weight: 600; cursor: pointer;
+            transition: opacity 0.2s; margin-top: 8px;
+        }
+        .login-modal-submit:hover { opacity: 0.9; }
+        .login-modal-footer { display: flex; justify-content: space-between; margin-top: 18px; font-size: 13px; }
+        .login-modal-footer a { color: hsl(var(--primary)); text-decoration: none; transition: opacity 0.2s; }
+        .login-modal-footer a:hover { opacity: 0.8; }
+        .login-modal-close {
+            position: absolute; top: 16px; right: 16px;
+            background: none; border: none; color: hsl(var(--muted-foreground));
+            font-size: 20px; cursor: pointer; padding: 4px; line-height: 1;
+        }
+        .login-modal-close:hover { color: hsl(var(--foreground)); }
+
+        /* Toast */
+        .toast-container { position: fixed; top: 20px; right: 20px; z-index: 10000; display: flex; flex-direction: column; gap: 10px; }
+        .toast {
+            padding: 12px 20px; border-radius: 10px; color: #fff; font-size: 14px; font-weight: 500;
+            display: flex; align-items: center; gap: 8px; animation: slideIn 0.3s ease;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+        }
+        .toast-success { background: linear-gradient(135deg, hsl(var(--primary)), #8b5cf6); }
+        .toast-error { background: hsl(var(--destructive)); }
+        .toast-icon { width: 18px; height: 18px; }
+        @keyframes slideIn { from { opacity: 0; transform: translateX(40px); } to { opacity: 1; transform: translateX(0); } }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            .content-container {
+                grid-template-columns: 1fr;
+                gap: 1.5rem;
+            }
+            .settings-panel, .prompt-section {
+                padding: 1.5rem;
+            }
+        }
+
+        /* Media Upload Items */
+        .media-item {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.5rem 0.75rem;
+            background: hsl(var(--muted) / 0.5);
+            border-radius: 8px;
+            font-size: 0.8rem;
+        }
+        .media-item-preview {
+            width: 40px;
+            height: 40px;
+            border-radius: 6px;
+            object-fit: cover;
+            background: hsl(var(--background));
+        }
+        .media-item-info {
+            flex: 1;
+            min-width: 0;
+        }
+        .media-item-name {
+            color: hsl(var(--foreground));
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        .media-item-type {
+            color: hsl(var(--muted-foreground));
+            font-size: 0.7rem;
+        }
+        .media-item-remove {
+            background: none;
+            border: none;
+            color: hsl(var(--destructive));
+            cursor: pointer;
+            font-size: 1rem;
+            padding: 2px 6px;
+            border-radius: 4px;
+        }
+        .media-item-remove:hover {
+            background: hsl(var(--destructive) / 0.15);
+        }
+    </style>
+</head>
+<body>
+    <div class="container" style="padding: 1.5rem 1rem; max-width: 1280px; margin: 0 auto;">
+        <div class="page-header">
+            <h1 class="page-title">AI 视频</h1>
+        </div>
+
+        <div class="content-container">
+            <!-- Settings Panel -->
+            <aside class="settings-panel">
+                <h2>视频设置</h2>
+
+                <!-- Region -->
+                <div class="form-group">
+                    <label for="region">服务地域</label>
+                    <select id="region">
+                        <option value="beijing">北京</option>
+                        <option value="singapore">新加坡</option>
+                    </select>
+                </div>
+
+                <!-- Model Selection -->
+                <div class="form-group">
+                    <label for="model-select">选择模型</label>
+                    <select id="model-select">
+                        <option value="wan2.7-t2v">万相 wan2.7 文生视频</option>
+                        <option value="wan2.7-r2v">万相 wan2.7 参考生视频</option>
+                        <option value="wan2.6-t2v">万相 wan2.6 文生视频</option>
+                        <option value="wan2.5-t2v-preview">万相 wan2.5 文生视频</option>
+                        <option value="wan2.2-t2v-plus">万相 wan2.2 文生视频</option>
+                    </select>
+                </div>
+
+                <!-- Duration -->
+                <div class="form-group">
+                    <label for="duration">视频时长 (秒)</label>
+                    <select id="duration">
+                        <option value="5" selected>5 秒</option>
+                        <option value="10">10 秒</option>
+                        <option value="15">15 秒</option>
+                    </select>
+                </div>
+
+                <!-- Resolution (for wan2.7) -->
+                <div class="form-group" id="resolution-group">
+                    <label for="resolution">分辨率</label>
+                    <select id="resolution">
+                        <option value="720P">720P</option>
+                        <option value="1080P" selected>1080P</option>
+                    </select>
+                </div>
+
+                <!-- Size (for wan2.6 and earlier) -->
+                <div class="form-group" id="size-group" style="display: none;">
+                    <label for="size">分辨率</label>
+                    <select id="size"></select>
+                </div>
+
+                <!-- Aspect Ratio -->
+                <div class="form-group">
+                    <label for="aspect-ratio">画面比例</label>
+                    <select id="aspect-ratio">
+                        <option value="16:9">16:9 (横屏)</option>
+                        <option value="9:16">9:16 (竖屏)</option>
+                        <option value="1:1">1:1 (正方形)</option>
+                        <option value="4:3">4:3 (传统)</option>
+                        <option value="3:4">3:4 (肖像)</option>
+                    </select>
+                </div>
+
+                <!-- Prompt Extend -->
+                <div class="form-group">
+                    <label for="prompt-extend">智能改写提示词</label>
+                    <select id="prompt-extend">
+                        <option value="true" selected>开启</option>
+                        <option value="false">关闭</option>
+                    </select>
+                </div>
+
+                <!-- Negative Prompt -->
+                <div class="form-group">
+                    <label for="negative-prompt">反向提示词 (可选)</label>
+                    <input type="text" id="negative-prompt" placeholder="不希望出现的内容，如：低质量、模糊" style="width:100%;padding:0.75rem 1rem;border-radius:var(--radius);border:1px solid hsl(var(--border));background-color:hsl(var(--background));color:hsl(var(--foreground));font-size:0.875rem;">
+                </div>
+
+                <!-- Media Upload (for r2v model) -->
+                <div id="media-section" style="display: none;">
+                    <div class="form-group">
+                        <label>参考素材</label>
+                        <div id="media-list" style="display:flex;flex-direction:column;gap:0.5rem;margin-bottom:0.75rem;"></div>
+                        <div style="display:flex;gap:0.5rem;flex-wrap:wrap;">
+                            <button type="button" id="add-image-btn" class="btn-secondary" style="font-size:0.8rem;padding:0.4rem 0.8rem;">+ 添加图片</button>
+                            <button type="button" id="add-video-btn" class="btn-secondary" style="font-size:0.8rem;padding:0.4rem 0.8rem;">+ 添加视频</button>
+                            <button type="button" id="add-audio-btn" class="btn-secondary" style="font-size:0.8rem;padding:0.4rem 0.8rem;">+ 添加音色</button>
+                        </div>
+                        <input type="file" id="media-image-input" accept="image/jpeg,image/png,image/bmp,image/webp" style="display:none;" multiple>
+                        <input type="file" id="media-video-input" accept="video/mp4,video/quicktime" style="display:none;">
+                        <input type="file" id="media-audio-input" accept="audio/wav,audio/mpeg" style="display:none;">
+                        <p style="font-size:0.75rem;color:hsl(var(--muted-foreground));margin-top:0.5rem;">
+                            图片: JPEG/PNG/BMP/WEBP, ≤20MB | 视频: MP4/MOV, ≤100MB, 1-30s | 音色: WAV/MP3, ≤15MB, 1-10s<br>
+                            提示词中用 "图1""视频1" 指代素材，顺序与下方列表一致
+                        </p>
+                    </div>
+                </div>
+
+                <!-- Watermark (hidden, default off) -->
+                <div class="form-group" style="display: none;">
+                    <label for="watermark">添加水印</label>
+                    <select id="watermark">
+                        <option value="false" selected>不添加</option>
+                        <option value="true">添加</option>
+                    </select>
+                </div>
+
+                <!-- History -->
+                <div id="history-section" class="history-section" style="display: none;">
+                    <div class="history-header">
+                        <h3 class="history-title">生成历史</h3>
+                        <button id="clear-history-btn" class="btn-secondary" style="padding: 0.25rem 0.75rem; font-size: 0.75rem;">清空</button>
+                    </div>
+                    <div id="history-list" class="history-list"></div>
+                </div>
+            </aside>
+
+            <!-- Prompt Section -->
+            <section class="prompt-section">
+                <h2>提示词 (Prompt)</h2>
+                <textarea id="prompt" class="prompt-textarea" placeholder="输入描述视频内容的提示词..."></textarea>
+
+                <div class="form-group">
+                    <label for="style">风格预设</label>
+                    <select id="style">
+                        <option value="">默认</option>
+                        <option value="cinematic">电影感</option>
+                        <option value="realistic">写实</option>
+                        <option value="anime">动漫</option>
+                        <option value="cyberpunk">赛博朋克</option>
+                        <option value="fantasy">奇幻</option>
+                        <option value="retro">复古</option>
+                    </select>
+                </div>
+
+                <div class="action-buttons">
+                    <button id="generate-btn" class="btn-primary">生成视频 <span style="font-size:0.75rem;opacity:0.8;">(-10积分)</span></button>
+                    <button id="cancel-btn" class="btn-secondary" style="display: none;">取消</button>
+                    <button id="clear-btn" class="btn-secondary">清空</button>
+                </div>
+
+                <!-- Result Container -->
+                <div id="result-container" class="result-container">
+                    <div id="loading" class="loading hidden">
+                        <div id="gen-queue"></div>
+                    </div>
+                    <div id="result-video" class="result-video hidden">
+                        <video id="generated-video" controls></video>
+                        <div class="video-actions">
+                            <button id="download-btn" class="btn-secondary">下载视频</button>
+                            <button id="copy-url-btn" class="btn-secondary">复制 URL</button>
+                        </div>
+                    </div>
+                    <div id="error-message" class="error-message hidden"></div>
+                </div>
+            </section>
+        </div>
+    </div>
+
+    <!-- Login Modal -->
+    <div class="login-modal" id="loginModal">
+        <div class="login-modal-box">
+            <button class="login-modal-close" id="loginModalClose">&times;</button>
+            <div class="login-modal-logo">
+                <svg width="28" height="28" viewBox="0 0 1024 1024" version="1.1" xmlns="http://www.w3.org/2000/svg">
+                    <defs>
+                        <linearGradient id="login-logo-gradient" x1="0%" y1="0%" x2="100%" y2="100%">
+                            <stop offset="0%" style="stop-color:hsl(190, 100%, 55%)" />
+                            <stop offset="100%" style="stop-color:#8b5cf6" />
+                        </linearGradient>
+                    </defs>
+                    <path d="M447.21664 393.38496l0.9472-0.768a108.416 108.416 0 0 1 10.89536-7.6032l2.69824 1.35168-1.35168 2.69824c-2.69824 0.90112-4.50048 2.2528-5.4016 4.05504-1.80224 4.5056-4.5056 7.6544-8.10496 9.45664l-1.35168 2.70336c-5.4016 5.4016-10.8032 9.00608-16.20992 10.8032l-4.05504 5.40672-2.69824 10.8032-5.40672 1.3568c-27.91936 18.91328-56.28928 49.98144-85.10464 93.2096v-5.4016A20.03968 20.03968 0 0 1 337.47456 512c7.20384-31.52384 24.76544-57.64096 52.6848-78.35136-11.70944 6.2976-27.91936 23.41376-48.63488 51.33312v-18.91328C418.97984 388.61312 461.312 349.89056 468.51584 349.89056a25.4976 25.4976 0 0 1 8.10496 1.35168L406.3744 417.4336l14.85824-2.69824c0-2.70336 0.90112-5.85728 2.69824-9.45664 2.70336-0.90112 5.85728-1.35168 9.45664-1.35168l1.35168-2.70336v2.70336h1.35168l1.35168 1.35168V399.872l2.70336-4.04992h2.69824l1.35168-5.40672c0.90112-1.80224 2.2528-3.1488 4.05504-4.04992v4.04992c-0.1536 0.60416-0.31232 1.152-0.4864 1.65376l-0.54784 1.31584zM329.3696 563.33312v-6.75328l1.28-1.59232-1.28-6.51264c0-4.32128 0.86528-8.64768 2.59072-12.96896l1.4592-3.24096-1.34656-4.05504c27.91424-27.91936 46.37696-43.67872 55.38304-47.2832l4.05504-14.85824 2.70336 2.70336 27.01824-24.32v-5.4016c13.50656-14.40768 21.61152-22.74304 24.32-24.99072 2.69824-2.2528 5.4016-3.82976 8.09984-4.73088h1.35168l9.45664-5.4016 4.05504-2.70336 2.69824-2.70336c0.90112 0 1.80224 0.90112 2.70336 2.70336-23.41376 16.20992-35.57376 27.4688-36.47488 33.77152-10.8032 13.51168-16.20992 23.41888-16.20992 29.7216L329.3696 563.33312z m14.85824-112.128c6.30784-16.20992 15.75936-27.91424 28.36992-35.1232l-28.3648 35.1232z" fill="url(#login-logo-gradient)"/>
+                </svg>
+                <span class="login-modal-logo-text">Ktoonai</span>
+            </div>
+            <div class="login-modal-title">欢迎登录Ktoonai</div>
+            <div class="login-modal-field">
+                <input type="text" id="loginUsername" placeholder="请输入用户名" autocomplete="username">
+            </div>
+            <div class="login-modal-field login-modal-password">
+                <input type="password" id="loginPassword" placeholder="请输入密码" autocomplete="current-password">
+                <button class="login-modal-eye" id="loginEyeToggle" type="button">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+                </button>
+            </div>
+            <button class="login-modal-submit" id="loginSubmit">登录</button>
+            <div class="login-modal-footer">
+                <a href="../converted-site/forgot-password.html">忘记密码?</a>
+                <a href="../converted-site/register.html">没有账号?</a>
+            </div>
+        </div>
+    </div>
+
+    <script src="js/points.js"></script>
+<script src="js/script-video.js?v=4"></script>
+    <script>
+        // Toast system
+        function showToast(message, type) {
+            type = type || 'success';
+            var container = document.querySelector('.toast-container');
+            if (!container) {
+                container = document.createElement('div');
+                container.className = 'toast-container';
+                document.body.appendChild(container);
+            }
+            var toast = document.createElement('div');
+            toast.className = 'toast toast-' + type;
+            var icon = type === 'success'
+                ? '<svg class="toast-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg>'
+                : '<svg class="toast-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg>';
+            toast.innerHTML = icon + '<span>' + message + '</span>';
+            container.appendChild(toast);
+            setTimeout(function() {
+                toast.style.opacity = '0';
+                toast.style.transform = 'translateX(40px)';
+                toast.style.transition = 'all 0.3s ease';
+                setTimeout(function() { toast.remove(); }, 300);
+            }, 3000);
+        }
+
+        // Clear
+        document.getElementById('clear-btn').addEventListener('click', function() {
+            document.getElementById('prompt').value = '';
+            document.getElementById('generated-video').src = '';
+            document.getElementById('result-video').classList.add('hidden');
+            document.getElementById('error-message').classList.add('hidden');
+        });
+
+        // Login modal
+        var loginModal = document.getElementById('loginModal');
+        document.getElementById('loginModalClose').addEventListener('click', function() { loginModal.classList.remove('active'); });
+        document.getElementById('loginEyeToggle').addEventListener('click', function() {
+            var pw = document.getElementById('loginPassword');
+            pw.type = pw.type === 'password' ? 'text' : 'password';
+        });
+        document.getElementById('loginSubmit').addEventListener('click', function() {
+            var username = document.getElementById('loginUsername').value.trim();
+            var password = document.getElementById('loginPassword').value.trim();
+            if (!username || !password) { showToast('请输入用户名和密码', 'error'); return; }
+            localStorage.setItem('ktoonai_user', JSON.stringify({ username: username }));
+            loginModal.classList.remove('active');
+            showToast('登录成功');
+            updateUI();
+        });
+
+        function checkLogin() {
+            var user = localStorage.getItem('ktoonai_user');
+            return user ? JSON.parse(user) : null;
+        }
+
+        function updateUI() {
+            // Placeholder for UI updates after login
+        }
+
+        // URL params for model pre-selection
+        var urlParams = new URLSearchParams(window.location.search);
+        var modelParam = urlParams.get('model');
+        if (modelParam) {
+            var sel = document.getElementById('model-select');
+            for (var i = 0; i < sel.options.length; i++) {
+                if (sel.options[i].value === modelParam) { sel.selectedIndex = i; break; }
+            }
+        }
+    </script>
+</body>
+</html>
