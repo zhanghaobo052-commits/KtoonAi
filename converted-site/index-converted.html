@@ -1393,7 +1393,7 @@
     <!-- Hero Section -->
     <section class="hero-section">
         <div class="hero-background">
-            <img src="assets/守岸人.png" alt="AI Anime Art" />
+            <img src="https://ktoonai-1425689077.cos.ap-beijing.myqcloud.com/守岸人.png" alt="AI Anime Art" />
         </div>
         <div class="hero-overlay"></div>
 
@@ -1539,7 +1539,7 @@
             <div class="models-grid">
                 <div class="model-card">
                     <div class="model-image">
-                        <img src="assets/即梦.png" alt="即梦" />
+                        <img src="https://ktoonai-1425689077.cos.ap-beijing.myqcloud.com/即梦.png" alt="即梦" />
                     </div>
                     <h3 class="model-name">即梦</h3>
                     <p class="model-description">强大的AI创作平台</p>
@@ -1547,7 +1547,7 @@
 
                 <div class="model-card">
                     <div class="model-image">
-                        <img src="assets/nanobanana.png" alt="nano-banana" />
+                        <img src="https://ktoonai-1425689077.cos.ap-beijing.myqcloud.com/nanobanana.png" alt="nano-banana" />
                     </div>
                     <h3 class="model-name">nano-banana</h3>
                     <p class="model-description">高效的图像生成模型</p>
@@ -1555,7 +1555,7 @@
 
                 <div class="model-card">
                     <div class="model-image">
-                        <img src="assets/flux.png" alt="flux" />
+                        <img src="https://ktoonai-1425689077.cos.ap-beijing.myqcloud.com/flux.png" alt="flux" />
                     </div>
                     <h3 class="model-name">flux</h3>
                     <p class="model-description">高质量的图像生成</p>
@@ -1563,7 +1563,7 @@
 
                 <div class="model-card">
                     <div class="model-image">
-                        <img src="assets/gpt.png" alt="GPT" />
+                        <img src="https://ktoonai-1425689077.cos.ap-beijing.myqcloud.com/gpt.png" alt="GPT" />
                     </div>
                     <h3 class="model-name">GPT</h3>
                     <p class="model-description">GPT-Image 图片生成与编辑</p>
@@ -1696,7 +1696,8 @@
             const heroShowcaseGrid = document.getElementById('hero-showcase-grid');
             if (!heroShowcaseGrid) return;
 
-            // All sample images from yangpian folder - using simple filenames
+            // All sample images - using COS CDN URLs
+            const COS_BASE = 'https://ktoonai-1425689077.cos.ap-beijing.myqcloud.com';
             const sampleImages = [
                 { name: '1.png', title: '梦幻蓝调战船' },
                 { name: '2.png', title: '云端红色飞机' },
@@ -1734,7 +1735,7 @@
                 const item = document.createElement('div');
                 item.className = 'hero-showcase-item';
                 item.innerHTML = `
-                    <img src="../ai-image-tool/yangpian/${image.name}" alt="${image.title}" onerror="this.style.display='none'">
+                    <img src="${COS_BASE}/${image.name}" alt="${image.title}" onerror="this.style.display='none'">
                     <div class="hero-showcase-item-overlay">${image.title}</div>
                 `;
                 heroShowcaseGrid.appendChild(item);
@@ -1886,7 +1887,7 @@
                         if (loggedIn) {
                             var avatarSrc = null;
                             if (loggedIn === '\u60c5\u7eea\u8fc7\u5ea6\u8001\u5e08') {
-                                avatarSrc = '../ai-image-tool/yangpian/主用户/主用户头像.png';
+                                avatarSrc = 'https://ktoonai-1425689077.cos.ap-beijing.myqcloud.com/主用户/主用户头像.png';
                             } else if (currentUser && currentUser.avatar) {
                                 avatarSrc = currentUser.avatar;
                             }

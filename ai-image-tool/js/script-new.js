@@ -1030,7 +1030,7 @@ function submitPublish() {
     // Get avatar
     let avatar = '';
     if (loggedIn === '情绪过度老师') {
-        avatar = 'yangpian/主用户/主用户头像.png';
+        avatar = 'https://ktoonai-1425689077.cos.ap-beijing.myqcloud.com/主用户/主用户头像.png';
     } else {
         const users = JSON.parse(localStorage.getItem('ktoon_users') || '[]');
         const u = users.find(function(u) { return u.username === loggedIn; });

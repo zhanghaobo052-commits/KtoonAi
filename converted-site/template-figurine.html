@@ -519,7 +519,7 @@
             var loggedIn = localStorage.getItem('ktoon_logged_in') || '匿名用户';
             var avatar = '';
             if (loggedIn === '情绪过度老师') {
-                avatar = '../ai-image-tool/yangpian/主用户/主用户头像.png';
+                avatar = 'https://ktoonai-1425689077.cos.ap-beijing.myqcloud.com/主用户/主用户头像.png';
             } else {
                 var users = JSON.parse(localStorage.getItem('ktoon_users') || '[]');
                 for (var i = 0; i < users.length; i++) {

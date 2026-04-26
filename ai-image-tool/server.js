@@ -2,6 +2,7 @@ const http = require('http');
 const https = require('https');
 const fs = require('fs');
 const path = require('path');
+const zlib = require('zlib');
 const iconv = require('iconv-lite');
 
 // 加载 API 配置
@@ -13,7 +14,7 @@ try {
     CONFIG = { MODELS: {} };
 }
 
-const port = 8003;
+const port = 80;
 
 const mimeTypes = {
     '.html': 'text/html',
@@ -879,8 +880,30 @@ const server = http.createServer((req, res) => {
                 res.end('Server error: ' + error.code);
             }
         } else {
-            res.writeHead(200, { 'Content-Type': contentType });
-            res.end(content, 'utf-8');
+            const acceptEncoding = req.headers['accept-encoding'] || '';
+            const compressibleTypes = ['text/html', 'text/css', 'application/javascript', 'application/json', 'image/svg+xml'];
+            if (compressibleTypes.includes(contentType) && acceptEncoding.includes('gzip')) {
+                zlib.gzip(content, (err, compressed) => {
+                    if (err) {
+                        res.writeHead(200, { 'Content-Type': contentType });
+                        res.end(content);
+                    } else {
+                        res.writeHead(200, {
+                            'Content-Type': contentType,
+                            'Content-Encoding': 'gzip',
+                            'Content-Length': compressed.length,
+                            'Cache-Control': 'public, max-age=3600'
+                        });
+                        res.end(compressed);
+                    }
+                });
+            } else {
+                res.writeHead(200, {
+                    'Content-Type': contentType,
+                    'Cache-Control': extname === '.html' ? 'no-cache' : 'public, max-age=86400'
+                });
+                res.end(content);
+            }
         }
     });
 });
